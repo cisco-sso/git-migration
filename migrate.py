@@ -14,7 +14,7 @@ githubAccountID = creds['Github_AccountID']
 
 # Get arguments (project name to migrate)
 parser = argparse.ArgumentParser('Migrate Repositories')
-parser.add_argument('project', metavar='P', type=str, help='ID of bitbucket project to be migrated')
+parser.add_argument('project', metavar='P', type=str, help='KEY of BitBucket project to be migrated')
 args = parser.parse_args()
 print('Target project: ', args.project)
 
