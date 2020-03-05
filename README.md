@@ -28,7 +28,7 @@ Steps for setting up credentials:
 
 ------
 
-After this, you can run `python migrate.py YOUR_PROJECT_NAME` to migrate the repositories over to the github account.
+After this, you can run `python migrate.py YOUR_PROJECT_KEY` to migrate the repositories over to the github account. The Project Key can be found in the *<u>BitBucket Dashboard > Projects</u>* Tab.
 
 Repositories with open Pull Requests are blocked from migrating as the PRs cannot be migrated. Close the PRs and then try again.
 
