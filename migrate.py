@@ -4,6 +4,8 @@ import json
 import os
 import shutil
 
+import utils
+
 # Get required credentials from JSON file
 with open("./credentials.json") as file:
     creds = json.load(file)
@@ -18,53 +20,8 @@ parser.add_argument('project', metavar='P', type=str, help='KEY of BitBucket pro
 args = parser.parse_args()
 print('Target project: ', args.project)
 
-# Check BitBucket Access Token
-bitbucketAccessCheckLink = "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos".format(args.project)
-bitbucketAccessCheck = requests.get(
-    bitbucketAccessCheckLink,
-    headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)}
-)
-
-# Check GitHub Access Token
-githubAccessTokenCheckLink = "https://***REMOVED***/api/v3/user/repos"
-githubAccessTokenCheck = requests.get(
-    "https://***REMOVED***/api/v3/user/repos",
-    headers={"Authorization": "Bearer {}".format(githubToken)}
-)
-
-if(githubAccessTokenCheck.status_code!=200 or bitbucketAccessCheck.status_code!=200):
-    print("Something went wrong!")
-    # Check which access token failed
-    if(githubAccessTokenCheck.status_code==401 and bitbucketAccessCheck.status_code==401):
-        print("GitHub and BitBucket Access Tokens Failed: Unauthorized\nPlease check access tokens.")
-    elif(bitbucketAccessCheck.status_code==404):
-        print("Bitbucket Project not found: Please check the project ID.")
-    elif(bitbucketAccessCheck.status_code==401):
-        print("BitBucket Access Token Failed: Unauthorized\nPlease check access token.")
-    elif(githubAccessTokenCheck.status_code==401):
-        print("GitHub Access Token Failed: Unauthorized\nPlease check access token.")
-    else:
-        print("BitBucket Status: {}".format(bitbucketAccessCheck.status_code))
-        print("GitHub Status: {}".format(githubAccessTokenCheck.status_code))
+if (not utils.checkCredentials(args.project)):
     exit(1)
-else:
-    print("Access Tokens working!")
-
-# Filter function to get http links to clone repo
-def isHTTP(link):
-    if(link["name"]=="http" or link["name"]=="https"):
-        return True
-    else:
-        return False
-
-# Confirmation prompt from user
-def yes_or_no(question):
-    while "the answer is invalid":
-        reply = str(input(question+' (y/n): ')).lower().strip()
-        if reply[0] == 'y':
-            return True
-        if reply[0] == 'n':
-            return False
 
 # Loop control variables
 isLastPage = False
@@ -121,7 +78,7 @@ while(not isLastPage):
             repoInfo["name"] = repo["name"]
             if("description" in repo.keys()):
                 repoInfo["description"] = repo["description"]
-            link = list(filter(isHTTP, repo["links"]["clone"]))
+            link = list(filter(utils.isHTTP, repo["links"]["clone"]))
             repoInfo["cloneLink"] = link[0]["href"]
             accepts.append(repoInfo)
 
@@ -140,14 +97,14 @@ print("Close all PRs before migrating a repo.")
 if(acceptedNumber==0):
     exit(0)
 
-confirm = yes_or_no("Continue with migrating accepted repos?")
+confirm = utils.yes_or_no("Continue with migrating accepted repos?")
 if(not confirm):
     print("No repositories migrated")
     exit(0)
 print("Migrating {} repositories...".format(len(accepts)))
 
-# Make a temporary folder in root to clone repos from BitBucket
-os.chdir(os.path.expanduser('~'))
+# Make a temporary folder in CWD to clone repos from BitBucket
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
 isDir = os.path.isdir("migration_temp")
 if(not isDir):
     os.mkdir("migration_temp")
