@@ -2,11 +2,12 @@
 
 Prerequisites:
 
+- python3, pip3
 - pipenv
 
-to install `pipenv` run: `pip3 install pipenv`
-
 If running python from Anaconda distribution, `pipenv` should be preinstalled.
+
+Otherwise, to install `pipenv` run: `pip3 install pipenv`
 
 ------
 
@@ -20,9 +21,11 @@ In the root of the project, run:
 
 Steps for setting up credentials:
 
-1. In your BitBucket dashboard, go to *<u>Manage account > Personal access tokens > Create a token</u>*. Feel free to name it anything.
+1. In your BitBucket dashboard, go to *<u>Manage account > Personal access tokens > Create a token</u>*. Feel free to name it anything. Give the following permissions.
+   ![Screenshot 2020-03-09 at 11.15.15 AM](/Users/***REMOVED***/Desktop/Screenshot 2020-03-09 at 11.15.15 AM.png)
 2. After the token is generated, copy it and paste it in *credentials.json* in the project's root as ***Bitbucket_AccessToken***.
-3. In your GitHub dashboard, go to *<u>Profile settings > Developer settings > Personal access tokens > Generate new token</u>*. Name it anything you want.
+3. In your GitHub dashboard, go to *<u>Profile settings > Developer settings > Personal access tokens > Generate new token</u>*. Name it anything you want. Make sure the <u>repo</u> and <u>admin:org</u> scopes are ticked.
+   ![Screenshot 2020-03-09 at 11.14.40 AM](/Users/***REMOVED***/Desktop/Screenshot 2020-03-09 at 11.14.40 AM.png)
 4. Copy the generated token and paste it in *credentials.json* in the project's root as ***Github_AccessToken***.
 5. Also enter the ***BitBucket_AccountID*** and ***Github_AccountID*** in *credentials.json*. This should usually just be your CEC ID. Save the file.
 
