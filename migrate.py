@@ -77,7 +77,7 @@ while(not isLastPage):
         start = projectRepos["nextPageStart"]
 
     # Preprocess repository data
-    for repo in projectRepos["values"][2:3]:
+    for repo in projectRepos["values"]:
         # Check if repository has open PRs on BitBucket
         repoPRLink = "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos/{}/pull-requests".format(args.project, repo["name"])
         pullRequests = requests.get(
