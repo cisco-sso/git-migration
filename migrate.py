@@ -16,12 +16,41 @@ githubAccountID = creds['Github_AccountID']
 
 # Get arguments (project name to migrate)
 parser = argparse.ArgumentParser('Migrate Repositories')
+parser.add_argument('-c', '--cex', action='store_true', help='Pass flag to push to CEX organization')
 parser.add_argument('project', metavar='P', type=str, help='KEY of BitBucket project to be migrated')
 args = parser.parse_args()
 print('Target project: ', args.project)
 
 if (not utils.checkCredentials(args.project)):
     exit(1)
+
+pushToOrg = args.cex
+if (pushToOrg):
+    print('Push destination: CX Engineering organization')
+
+    isMember = requests.get(
+        "https://***REMOVED***/api/v3/orgs/***REMOVED***/members/{}".format(githubAccountID),
+        headers={"Authorization": "Bearer {}".format(githubToken)}
+    )
+    # API returns 401 if the user's access token is incorrect
+    if (isMember.status_code == 401):
+        print("While checking your organization membership...\nGitHub Access Token Failed: Unauthorized\nPlease check access token.")
+        exit(0)
+    # API returns 204 if the person checking the membership is a member of the org
+    if (not isMember.status_code == 204):
+        print("\nYou appear to not be a member of the ***REMOVED*** Organization\nCheck the GitHub Account ID in credentials.json\nOr try again after being added as a member.")
+        exit(0)
+    print("Organization membership check PASSED!")
+    confirmMigrate = utils.yes_or_no("Migrate to GitHub ***REMOVED*** Org?")
+    if(not confirmMigrate):
+        print("Rerun script without --cex flag to migrate to GitHub personal Account")
+        exit(0)
+else:
+    print('Push destination: Personal Account - {}'.format(githubAccountID))
+    confirmMigrate = utils.yes_or_no("Migrate to GitHub Personal Account?")
+    if(not confirmMigrate):
+        print("Rerun script with --cex flag to migrate to GitHub ***REMOVED*** Org")
+        exit(0)
 
 # Loop control variables
 isLastPage = False
@@ -43,12 +72,12 @@ while(not isLastPage):
     projectRepos = json.loads(projectRepos.text)
 
     # Check if last page
-    isLastPage = True#projectRepos["isLastPage"]
+    isLastPage = projectRepos["isLastPage"]
     if(not isLastPage):
         start = projectRepos["nextPageStart"]
 
     # Preprocess repository data
-    for repo in projectRepos["values"]:
+    for repo in projectRepos["values"][2:3]:
         # Check if repository has open PRs on BitBucket
         repoPRLink = "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos/{}/pull-requests".format(args.project, repo["name"])
         pullRequests = requests.get(
@@ -56,31 +85,46 @@ while(not isLastPage):
             headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)}
         )
         pullRequests = json.loads(pullRequests.text)
-        # Check if same repository already exists on GitHub
-        githubRepoCheckLink = "https://***REMOVED***/api/v3/repos/{}/{}".format(githubAccountID, repo["name"])
-        githubRepoCheck = requests.get(
-            githubRepoCheckLink,
-            headers={"Authorization": "Bearer {}".format(githubToken)}
-        )
-
         # Active pull requests on Bitbucket
         if(pullRequests["size"] != 0):
             print("Repo {}: Rejected - {} active PRs".format(repo["name"], pullRequests["size"]))
             openPRs.append({ repo["name"]: pullRequests["size"] })
-        # Repository with a similar name already exists on GitHub
-        elif(githubRepoCheck.status_code!=404):
-            print("Repo {}: Rejected - {} already exists on GitHub Account".format(repo["name"], repo["name"]))
-            alreadyExisting.append({ repo["name"]: pullRequests["size"] })
-        # No PRs on Bitbucket and Repo doesn't already exist on GitHub
+            continue
+
+        if (pushToOrg):
+            # Check if same repository already exists on GitHub ***REMOVED*** Org
+            githubOrgRepoCheckLink = "https://***REMOVED***/api/v3/repos/***REMOVED***/{}".format(repo["name"])
+            githubOrgRepoCheck = requests.get(
+                githubOrgRepoCheckLink,
+                headers={"Authorization": "Bearer {}".format(githubToken)}
+            )
+            # Repository with a similar name already exists on GitHub
+            if(githubOrgRepoCheck.status_code!=404):
+                print("Repo {}: Rejected - {} already exists on the ***REMOVED*** Organization".format(repo["name"], repo["name"]))
+                alreadyExisting.append({ repo["name"]: pullRequests["size"] })
+                continue
         else:
-            print("Repo {}: Accepted".format(repo["name"]))
-            repoInfo = {}
-            repoInfo["name"] = repo["name"]
-            if("description" in repo.keys()):
-                repoInfo["description"] = repo["description"]
-            link = list(filter(utils.isHTTP, repo["links"]["clone"]))
-            repoInfo["cloneLink"] = link[0]["href"]
-            accepts.append(repoInfo)
+            # Check if same repository already exists on GitHub Account
+            githubRepoCheckLink = "https://***REMOVED***/api/v3/repos/{}/{}".format(githubAccountID, repo["name"])
+            githubRepoCheck = requests.get(
+                githubRepoCheckLink,
+                headers={"Authorization": "Bearer {}".format(githubToken)}
+            )
+            # Repository with a similar name already exists on GitHub
+            if(githubRepoCheck.status_code!=404):
+                print("Repo {}: Rejected - {} already exists on GitHub Account".format(repo["name"], repo["name"]))
+                alreadyExisting.append({ repo["name"]: pullRequests["size"] })
+                continue
+
+        # No PRs on Bitbucket and Repo doesn't already exist on GitHub
+        print("Repo {}: Accepted".format(repo["name"]))
+        repoInfo = {}
+        repoInfo["name"] = repo["name"]
+        if("description" in repo.keys()):
+            repoInfo["description"] = repo["description"]
+        link = list(filter(utils.isHTTP, repo["links"]["clone"]))
+        repoInfo["cloneLink"] = link[0]["href"]
+        accepts.append(repoInfo)
 
 acceptedNumber = len(accepts)
 openPRsNumber = len(openPRs)
@@ -125,15 +169,25 @@ for repo in accepts:
     # API call to make new remote repo on GitHub
     requestPayload = {
         "name": bitbucketName,
+        "private": True
     }
     if("description" in repo.keys()):
         requestPayload["description"] = repo["description"]
-    # Create new repo of same name
-    gitResponse = requests.post(
-        "https://***REMOVED***/api/v3/user/repos",
-        data=json.dumps(requestPayload),
-        headers={"Authorization": "Bearer {}".format(githubToken)}
-    )
+    
+    if(pushToOrg):
+        # Create new repo of same name on GitHub ***REMOVED*** Org
+        gitResponse = requests.post(
+            "https://***REMOVED***/api/v3/orgs/***REMOVED***/repos",
+            data=json.dumps(requestPayload),
+            headers={"Authorization": "Bearer {}".format(githubToken)}
+        )
+    else:
+        # Create new repo of same name on GitHub Account
+        gitResponse = requests.post(
+            "https://***REMOVED***/api/v3/user/repos",
+            data=json.dumps(requestPayload),
+            headers={"Authorization": "Bearer {}".format(githubToken)}
+        )
 
     # Mirror the codebase to remote GitHub URL
     githubRepoData = json.loads(gitResponse.text)
