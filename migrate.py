@@ -16,7 +16,7 @@ githubAccountID = creds['Github_AccountID']
 
 # Get arguments (project name to migrate)
 parser = argparse.ArgumentParser('Migrate Repositories')
-parser.add_argument('-c', '--cex', action='store_true', help='Pass flag to push to CEX organization')
+parser.add_argument('-c', '--***REMOVED***', action='store_true', help='Pass flag to push to ***REMOVED*** organization')
 parser.add_argument('project', metavar='P', type=str, help='KEY of BitBucket project to be migrated')
 args = parser.parse_args()
 print('Target project: ', args.project)
@@ -24,7 +24,7 @@ print('Target project: ', args.project)
 if (not utils.checkCredentials(args.project)):
     exit(1)
 
-pushToOrg = args.cex
+pushToOrg = args.***REMOVED***
 if (pushToOrg):
     print('Push destination: CX Engineering organization')
 

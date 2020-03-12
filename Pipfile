@@ -9,7 +9,4 @@ pylint = "*"
 [packages]
 argparse = "*"
 requests = "*"
-inquirer = "*"
-
-[requires]
-python_version = "3.7"
+pyinquirer = "*"

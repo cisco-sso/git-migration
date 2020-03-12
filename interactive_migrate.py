@@ -1,4 +1,4 @@
-import inquirer
+from PyInquirer import prompt, print_json
 import requests
 import json
 import os
@@ -16,13 +16,15 @@ githubToken = creds['Github_AccessToken']
 githubAccountID = creds['Github_AccountID']
 
 pushQuestion = [
-    inquirer.List(
-      'pushDestination',
-      message="Migrate repositories to?",
-      choices=["GitHub CX Engineering Org", "Personal Github Account"],
-    )
+    {
+        'type': 'list',
+        'name': 'pushDestination',
+        'message': "Migrate repositories to?",
+        'choices': ["GitHub CX Engineering Org", "Personal Github Account"]
+    }
 ]
-pushAnswer = inquirer.prompt(pushQuestion)
+pushAnswer = prompt(pushQuestion)
+
 pushToOrg = pushAnswer["pushDestination"] == "GitHub CX Engineering Org"
 if (pushToOrg):
     print('Push destination: CX Engineering organization')
@@ -66,13 +68,14 @@ while(not isLastPage):
 
 # Ask which project to migrate
 projectQuestion = [
-    inquirer.List(
-      'project',
-      message="Which project to migrate? (Enter to select)",
-      choices=projectNames,
-    )
+    {
+        'type': 'list',
+        'name': 'project',
+        'message': 'Which project to migrate? (Enter to select)',
+        'choices': projectNames
+    }
 ]
-projectAnswer = inquirer.prompt(projectQuestion)
+projectAnswer = prompt(projectQuestion)
 [projectName, projectKey] = projectAnswer["project"].split(":")
 if(not utils.checkCredentials(projectKey)):
     exit(1)
@@ -98,16 +101,18 @@ while(not isLastPage):
         start = projectRepos["nextPageStart"]
 
     # Populate the project names
-    repoNames += [ "{}".format(repo["name"]) for repo in projectRepos["values"]]
+    repoNames += [ { 'name':"{}".format(repo["name"]) } for repo in projectRepos["values"]]
 
 # Ask which repos to migrate
 reposQuestion = [
-    inquirer.Checkbox('repos',
-        message="Which repos to migrate from {}:{}?\n(Spacebar to toggle selection, Enter to continue)".format(projectName, projectKey),
-        choices=repoNames,
-    ),
+    {
+        'type': 'checkbox',
+        'name': 'repos',
+        'message': "Which repos to migrate from {}:{}?\n(Spacebar to toggle selection, Enter to continue)".format(projectName, projectKey),
+        'choices': repoNames
+    }
 ]
-repoAnswers = inquirer.prompt(reposQuestion)
+repoAnswers = prompt(reposQuestion)
 
 # Repo metadata added to these lists
 accepts = []
