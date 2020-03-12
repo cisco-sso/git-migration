@@ -1,5 +1,8 @@
 import json
 import requests
+from colorama import init, Fore, Style
+
+init()
 
 def checkCredentials(project_ID):
     # Get required credentials from JSON file
@@ -25,22 +28,22 @@ def checkCredentials(project_ID):
     )
 
     if(githubAccessTokenCheck.status_code!=200 or bitbucketAccessCheck.status_code!=200):
-        print("Something went wrong!")
+        logBright(Fore.RED, "Something went wrong!")
         # Check which access token failed
         if(githubAccessTokenCheck.status_code==401 and bitbucketAccessCheck.status_code==401):
-            print("GitHub and BitBucket Access Tokens Failed: Unauthorized\nPlease check access tokens.")
+            logBright(Fore.RED, "GitHub and BitBucket Access Tokens Failed: Unauthorized\nPlease check access tokens.")
         elif(bitbucketAccessCheck.status_code==404):
-            print("Bitbucket Project not found: Please check the project ID.")
+            logBright(Fore.RED, "Bitbucket Project not found: Please check the project ID.")
         elif(bitbucketAccessCheck.status_code==401):
-            print("BitBucket Access Token Failed: Unauthorized\nPlease check access token.")
+            logBright(Fore.RED, "BitBucket Access Token Failed: Unauthorized\nPlease check access token.")
         elif(githubAccessTokenCheck.status_code==401):
-            print("GitHub Access Token Failed: Unauthorized\nPlease check access token.")
+            logBright(Fore.RED, "GitHub Access Token Failed: Unauthorized\nPlease check access token.")
         else:
-            print("BitBucket Status: {}".format(bitbucketAccessCheck.status_code))
-            print("GitHub Status: {}".format(githubAccessTokenCheck.status_code))
+            logBright(Fore.RED, "BitBucket Status: {}".format(bitbucketAccessCheck.status_code))
+            logBright(Fore.RED, "GitHub Status: {}".format(githubAccessTokenCheck.status_code))
         return False
     else:
-        print("Access Tokens working!")
+        logBright(Fore.GREEN, "Access Tokens working!")
         return True
 
 # Filter function to get http links to clone repo
@@ -50,11 +53,8 @@ def isHTTP(link):
     else:
         return False
 
-# Confirmation prompt from user
-def yes_or_no(question):
-    while "the answer is invalid":
-        reply = str(input(question+' (y/n): ')).lower().strip()
-        if reply[0] == 'y':
-            return True
-        if reply[0] == 'n':
-            return False
+def logBright(color, string):
+    print(color + Style.BRIGHT + string + Style.RESET_ALL)
+
+def logLight(color, string):
+    print(color + string + Style.RESET_ALL)

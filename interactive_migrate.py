@@ -3,9 +3,14 @@ import requests
 import json
 import os
 import shutil
+from colorama import init, Fore, Style
 
 # Custom imports
 import utils
+from utils import logBright, logLight
+
+# To enable colored printing on Windows as well
+init()
 
 # Get required credentials from JSON file
 with open("./credentials.json") as file:
@@ -27,28 +32,28 @@ pushAnswer = prompt(pushQuestion)
 
 pushToOrg = pushAnswer["pushDestination"] == "GitHub CX Engineering Org"
 if (pushToOrg):
-    print('Push destination: CX Engineering organization')
+    logBright(Fore.YELLOW, 'Push destination: CX Engineering organization')
     isMember = requests.get(
         "https://***REMOVED***/api/v3/orgs/***REMOVED***/members/{}".format(githubAccountID),
         headers={"Authorization": "Bearer {}".format(githubToken)}
     )
     # API returns 401 if the user's access token is incorrect
     if (isMember.status_code == 401):
-        print("While checking your organization membership...\nGitHub Access Token Failed: Unauthorized\nPlease check access token.")
+        logBright(Fore.RED, "While checking your organization membership...\nGitHub Access Token Failed: Unauthorized\nPlease check access token.")
         exit(0)
     # API returns 204 if the person checking the membership is a member of the org
     if (not isMember.status_code == 204):
-        print("\nYou appear to not be a member of the ***REMOVED*** Organization\nCheck the GitHub Account ID in credentials.json\nOr try again after being added as a member.")
+        logBright(Fore.RED, "\nYou appear to not be a member of the ***REMOVED*** Organization\nCheck the GitHub Account ID in credentials.json\nOr try again after being added as a member.")
         exit(0)
-    print("Organization membership check PASSED!")
+    logBright(Fore.GREEN, "Organization membership check PASSED!")
 else:
-    print('Push destination: Personal Account - {}'.format(githubAccountID))
+    logBright(Fore.YELLOW, 'Push destination: Personal Account - {}'.format(githubAccountID))
 
 projectNames = []
 isLastPage = False
 start = 0
 
-print("Getting list of projects...\n")
+logLight(Fore.BLUE, "Getting list of projects...\n")
 # Get list of projects
 while(not isLastPage):
     projectsUrl = "https://***REMOVED***/bitbucket/rest/api/1.0/projects/?start={}".format(start)
@@ -84,7 +89,7 @@ repoNames = []
 isLastPage = False
 start = 0
 
-print("Getting list of repositories...\n")
+logLight(Fore.BLUE, "Getting list of repositories...\n")
 # Get list of all repos
 while(not isLastPage):
     # Get list of repos under the mentioned project on BitBucket
@@ -130,7 +135,7 @@ for repoName in repoAnswers["repos"]:
     pullRequests = json.loads(pullRequests.text)
     # Active pull requests on Bitbucket
     if(pullRequests["size"] != 0):
-        print("Repo {}: Rejected - {} active PRs".format(repoName, pullRequests["size"]))
+        logLight(Fore.RED, "Repo {}: Rejected - {} active PRs".format(repoName, pullRequests["size"]))
         openPRs.append({ repoName: pullRequests["size"] })
         continue
 
@@ -144,7 +149,7 @@ for repoName in repoAnswers["repos"]:
         )
         # Repository with a similar name already exists on GitHub
         if(githubOrgRepoCheck.status_code!=404):
-            print("Repo {}: Rejected - {} already exists on the ***REMOVED*** Organization".format(repoName, repoName))
+            logLight(Fore.RED, "Repo {}: Rejected - {} already exists on the ***REMOVED*** Organization".format(repoName, repoName))
             alreadyExisting.append({ repoName: pullRequests["size"] })
             continue
     else:
@@ -156,12 +161,12 @@ for repoName in repoAnswers["repos"]:
         )
         # Repository with a similar name already exists on GitHub
         if(githubRepoCheck.status_code!=404):
-            print("Repo {}: Rejected - {} already exists on GitHub Account".format(repoName, repoName))
+            logLight(Fore.RED, "Repo {}: Rejected - {} already exists on GitHub Account".format(repoName, repoName))
             alreadyExisting.append({ repoName: pullRequests["size"] })
             continue
 
     # No PRs on Bitbucket and Repo doesn't already exist on GitHub
-    print("Repo {}: Accepted".format(repoName))
+    logLight(Fore.GREEN, "Repo {}: Accepted".format(repoName))
     repoInfo = {}
     repoInfo["name"] = repoName
     repoResponse = requests.get(
@@ -178,23 +183,31 @@ for repoName in repoAnswers["repos"]:
 acceptedNumber = len(accepts)
 openPRsNumber = len(openPRs)
 alreadyExistingNumber = len(alreadyExisting)
-print("Accepted: {}\tRejected: {} ( {} with open PRs, {} already existing on GitHub )".format(
-    acceptedNumber,
+print(
+    Style.BRIGHT + Fore.GREEN + "Accepted: {}\t".format(acceptedNumber) + Fore.RED +"Rejected: {} ( {} with open PRs, {} already existing on GitHub )".format(
     openPRsNumber+alreadyExistingNumber,
     openPRsNumber,
     alreadyExistingNumber
-))
+) + Style.RESET_ALL)
 
-print("Close all PRs before migrating a repo.")
+logBright(Fore.BLUE, "Close all PRs before migrating a repo.")
 
 if(acceptedNumber==0):
     exit(0)
 
-confirm = utils.yes_or_no("Continue with migrating accepted repos?")
-if(not confirm):
-    print("No repositories migrated")
+continueMigrationQuestion = [
+    {
+        'type': 'confirm',
+        'name': 'continueMigration',
+        'message': "Continue with migrating accepted repos?",
+        'default': True
+    }
+]
+continueMigration = prompt(continueMigrationQuestion)['continueMigration']
+if(not continueMigration):
+    logBright(Fore.BLUE, "No repositories migrated")
     exit(0)
-print("Migrating {} repositories...".format(len(accepts)))
+logLight(Fore.BLUE, "Migrating {} repositories...".format(len(accepts)))
 
 # Make a temporary folder in CWD to clone repos from BitBucket
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -253,4 +266,4 @@ if(not isDir):
     os.chdir("..")
     shutil.rmtree("migration_temp")
 
-print("Migration successfully completed - {} repositories copied to GitHub".format(acceptedNumber))
+logBright(Fore.GREEN, "Migration successfully completed - {} repositories copied to GitHub".format(acceptedNumber))
