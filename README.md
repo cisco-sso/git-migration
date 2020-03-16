@@ -51,7 +51,7 @@ The Project Key can be found in the *<u>BitBucket Dashboard > Projects</u>* Tab.
 
 ### `interactive_migrate.py` - migrate selected repositories from one project
 
-Alternatively, to have a better interactive experience, you can run `python interactive_migrate.py` to choose migration location and cherrypick the repositories to migrate. You can migrate just one repo or a subset of your project with this script.
+Alternatively, to have a better interactive experience, you can run `python interactive_migrate.py` to choose migration location and cherrypick the repositories to migrate. You can migrate just one repo, or a subset of repos,  or all repos of your project with this script.
 
 ------
 
@@ -59,7 +59,7 @@ Alternatively, to have a better interactive experience, you can run `python inte
 
 ### Rejected Repositories
 
-Repositories with open Pull Requests are blocked from migrating as the PRs cannot be migrated. Close the PRs and then try again.
+Repositories with open Pull Requests are blocked from migrating as the PRs cannot be migrated. It is recommended to close the PRs and then try again. ( In unavoidable cases, **`interactive_migrate.py`** allows for migration of such repos nonetheless)
 
 If GitHub account already has a repository with the same name as the one in BitBucket, that specific repository will be blocked from migrating.
 
