@@ -65,6 +65,24 @@ def processRepos(repositories, projectKey, pushToOrg, bitbucketAccessToken, gith
     alreadyExisting = []
     # Preprocess repository data
     for repoName in repositories["repos"]:
+        # Get all info on a repo
+        repoInfo = {
+            "openPRs": None,
+            "alreadyExisting": None
+        }
+        repoInfo["name"] = repoName
+        repoResponse = requests.get(
+            "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos/{}".format(projectKey, repoName),
+            headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)}
+        )
+        repoResponse = json.loads(repoResponse.text)
+        if("description" in repoResponse.keys()):
+            repoInfo["description"] = repoResponse["description"]
+        else:
+            repoInfo["description"] = None
+        link = list(filter(isHTTP, repoResponse["links"]["clone"]))
+        repoInfo["cloneLink"] = link[0]["href"]
+
         # Check if repository has open PRs on BitBucket
         repoPRLink = "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos/{}/pull-requests/".format(projectKey, repoName)
         pullRequests = requests.get(
@@ -75,8 +93,7 @@ def processRepos(repositories, projectKey, pushToOrg, bitbucketAccessToken, gith
         # Active pull requests on Bitbucket
         if(pullRequests["size"] != 0):
             logLight(Fore.RED, "Repo {}: Rejected - {} active PRs".format(repoName, pullRequests["size"]))
-            openPRs.append({ repoName: pullRequests["size"] })
-            continue
+            repoInfo["openPRs"] = pullRequests["size"]
 
         if (pushToOrg):
             # Check if same repository already exists on GitHub ***REMOVED*** Org
@@ -88,8 +105,7 @@ def processRepos(repositories, projectKey, pushToOrg, bitbucketAccessToken, gith
             # Repository with a similar name already exists on GitHub
             if(githubOrgRepoCheck.status_code!=404):
                 logLight(Fore.RED, "Repo {}: Rejected - {} already exists on the ***REMOVED*** Organization".format(repoName, repoName))
-                alreadyExisting.append({ repoName: pullRequests["size"] })
-                continue
+                repoInfo["alreadyExisting"] = True
         else:
             # Check if same repository already exists on GitHub
             githubRepoCheckLink = "https://***REMOVED***/api/v3/repos/{}/{}".format(githubAccountID, repoName)
@@ -100,23 +116,16 @@ def processRepos(repositories, projectKey, pushToOrg, bitbucketAccessToken, gith
             # Repository with a similar name already exists on GitHub
             if(githubRepoCheck.status_code!=404):
                 logLight(Fore.RED, "Repo {}: Rejected - {} already exists on GitHub Account".format(repoName, repoName))
-                alreadyExisting.append({ repoName: pullRequests["size"] })
-                continue
+                repoInfo["alreadyExisting"] = True
 
+        if (repoInfo["alreadyExisting"]):
+            alreadyExisting.append(repoInfo)
+        elif (repoInfo["openPRs"] != None):
+            openPRs.append(repoInfo)
         # No PRs on Bitbucket and Repo doesn't already exist on GitHub
-        logLight(Fore.GREEN, "Repo {}: Accepted".format(repoName))
-        repoInfo = {}
-        repoInfo["name"] = repoName
-        repoResponse = requests.get(
-            "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos/{}".format(projectKey, repoName),
-            headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)}
-        )
-        repoResponse = json.loads(repoResponse.text)
-        if("description" in repoResponse.keys()):
-            repoInfo["description"] = repoResponse["description"]
-        link = list(filter(isHTTP, repoResponse["links"]["clone"]))
-        repoInfo["cloneLink"] = link[0]["href"]
-        accepts.append(repoInfo)
+        else:
+            logLight(Fore.GREEN, "Repo {}: Accepted".format(repoName))
+            accepts.append(repoInfo)
     return accepts, openPRs, alreadyExisting
 
 # Get all BitBucket repos and check metadata together to reduce API requests
@@ -148,8 +157,27 @@ def getAndProcessBitbucketRepos(projectKey, pushToOrg, bitbucketAccessToken, git
 
         # Preprocess repository data
         for repo in projectRepos["values"]:
+            # Get all info on a repo
+            repoName = repo["name"]
+            repoInfo = {
+                "openPRs": None,
+                "alreadyExisting": None
+            }
+            repoInfo["name"] = repoName
+            repoResponse = requests.get(
+                "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos/{}".format(projectKey, repoName),
+                headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)}
+            )
+            repoResponse = json.loads(repoResponse.text)
+            if("description" in repoResponse.keys()):
+                repoInfo["description"] = repoResponse["description"]
+            else:
+                repoInfo["description"] = None
+            link = list(filter(isHTTP, repoResponse["links"]["clone"]))
+            repoInfo["cloneLink"] = link[0]["href"]
+
             # Check if repository has open PRs on BitBucket
-            repoPRLink = "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos/{}/pull-requests".format(projectKey, repo["name"])
+            repoPRLink = "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos/{}/pull-requests/".format(projectKey, repoName)
             pullRequests = requests.get(
                 repoPRLink,
                 headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)}
@@ -157,44 +185,40 @@ def getAndProcessBitbucketRepos(projectKey, pushToOrg, bitbucketAccessToken, git
             pullRequests = json.loads(pullRequests.text)
             # Active pull requests on Bitbucket
             if(pullRequests["size"] != 0):
-                logLight(Fore.RED, "Repo {}: Rejected - {} active PRs".format(repo["name"], pullRequests["size"]))
-                openPRs.append({ repo["name"]: pullRequests["size"] })
-                continue
+                logLight(Fore.RED, "Repo {}: Rejected - {} active PRs".format(repoName, pullRequests["size"]))
+                repoInfo["openPRs"] = pullRequests["size"]
 
             if (pushToOrg):
                 # Check if same repository already exists on GitHub ***REMOVED*** Org
-                githubOrgRepoCheckLink = "https://***REMOVED***/api/v3/repos/***REMOVED***/{}".format(repo["name"])
+                githubOrgRepoCheckLink = "https://***REMOVED***/api/v3/repos/***REMOVED***/{}".format(repoName)
                 githubOrgRepoCheck = requests.get(
                     githubOrgRepoCheckLink,
                     headers={"Authorization": "Bearer {}".format(githubAccessToken)}
                 )
                 # Repository with a similar name already exists on GitHub
                 if(githubOrgRepoCheck.status_code!=404):
-                    logLight(Fore.RED, "Repo {}: Rejected - {} already exists on the ***REMOVED*** Organization".format(repo["name"], repo["name"]))
-                    alreadyExisting.append({ repo["name"]: pullRequests["size"] })
-                    continue
+                    logLight(Fore.RED, "Repo {}: Rejected - {} already exists on the ***REMOVED*** Organization".format(repoName, repoName))
+                    repoInfo["alreadyExisting"] = True
             else:
-                # Check if same repository already exists on GitHub Account
-                githubRepoCheckLink = "https://***REMOVED***/api/v3/repos/{}/{}".format(githubAccountID, repo["name"])
+                # Check if same repository already exists on GitHub
+                githubRepoCheckLink = "https://***REMOVED***/api/v3/repos/{}/{}".format(githubAccountID, repoName)
                 githubRepoCheck = requests.get(
                     githubRepoCheckLink,
                     headers={"Authorization": "Bearer {}".format(githubAccessToken)}
                 )
                 # Repository with a similar name already exists on GitHub
                 if(githubRepoCheck.status_code!=404):
-                    logLight(Fore.RED, "Repo {}: Rejected - {} already exists on GitHub Account".format(repo["name"], repo["name"]))
-                    alreadyExisting.append({ repo["name"]: pullRequests["size"] })
-                    continue
+                    logLight(Fore.RED, "Repo {}: Rejected - {} already exists on GitHub Account".format(repoName, repoName))
+                    repoInfo["alreadyExisting"] = True
 
+            if (repoInfo["alreadyExisting"]):
+                alreadyExisting.append(repoInfo)
+            elif (repoInfo["openPRs"] != None):
+                openPRs.append(repoInfo)
             # No PRs on Bitbucket and Repo doesn't already exist on GitHub
-            logLight(Fore.GREEN, "Repo {}: Accepted".format(repo["name"]))
-            repoInfo = {}
-            repoInfo["name"] = repo["name"]
-            if("description" in repo.keys()):
-                repoInfo["description"] = repo["description"]
-            link = list(filter(isHTTP, repo["links"]["clone"]))
-            repoInfo["cloneLink"] = link[0]["href"]
-            accepts.append(repoInfo)
+            else:
+                logLight(Fore.GREEN, "Repo {}: Accepted".format(repoName))
+                accepts.append(repoInfo)
     return accepts, openPRs, alreadyExisting
 
 # Migrate all given repos to given destination

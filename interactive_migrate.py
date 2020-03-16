@@ -64,7 +64,7 @@ reposQuestion = [
     {
         'type': 'checkbox',
         'name': 'repos',
-        'message': "Which repos to migrate from {}:{}?\n(Spacebar to toggle selection, Enter to continue)".format(projectName, projectKey),
+        'message': "Which repos to migrate from {}:{}?".format(projectName, projectKey),
         'choices': repoList
     }
 ]
@@ -88,22 +88,76 @@ if(acceptedNumber==0):
     logBright(Fore.BLUE, "No repositories migrated")
     exit(0)
 
-# Confirm migration of accepted repos
-continueMigrationQuestion = [
+# Ask whether to migrate repos with OpenPRs
+acceptedOnly = "Accepted repos only"
+acceptedAllOpenPRs = "Accepted repos and ALL repos with Open PRs"
+acceptedSomeOpenPRs = "Accepted repos and SELECTED repos with Open PRs"
+whichMigrateQuestion = [
     {
-        'type': 'confirm',
-        'name': 'continueMigration',
-        'message': "Continue with migrating accepted repos?",
-        'default': True
+        'type': 'list',
+        'name': 'whichMigrate',
+        'message': "Which repositories to migrate? (Pull Requests won't be migrated)",
+        'choices': [
+            acceptedOnly,
+            acceptedAllOpenPRs,
+            acceptedSomeOpenPRs
+        ]
     }
 ]
-continueMigration = prompt(continueMigrationQuestion)['continueMigration']
-if(not continueMigration):
-    logBright(Fore.BLUE, "No repositories migrated")
-    exit(0)
+whichMigrate = prompt(whichMigrateQuestion)["whichMigrate"]
 
-# Migrate all accepted repos
-logLight(Fore.BLUE, "Migrating {} repositories...".format(len(accepts)))
-migrateRepos(accepts, pushToOrg, bitbucketAccountID, bitbucketAccessToken, githubAccountID, githubAccessToken)
+if (whichMigrate!=acceptedSomeOpenPRs):
+    # Confirm migration of accepted repos
+    continueMigrationQuestion = [
+        {
+            'type': 'confirm',
+            'name': 'continueMigration',
+            'message': "Continue with migrating [{}]?".format(whichMigrate),
+            'default': True
+        }
+    ]
+    continueMigration = prompt(continueMigrationQuestion)['continueMigration']
+    if(not continueMigration):
+        logBright(Fore.BLUE, "No repositories migrated")
+        exit(0)
+    # ALL Open PR repos
+    elif (whichMigrate==acceptedAllOpenPRs):
+        repositories = accepts + openPRs
+    # Only accepted repos
+    else:
+        repositories = accepts
+else:
+    # Ask to selet specific repos with Open PRs
+    openPRsRepoList = [ {'name': repo['name']} for repo in openPRs ]
+    whichOpenPRsQuestion = [
+        {
+            'type': 'checkbox',
+            'name': 'whichOpenPRs',
+            'message': 'Which repos with Open PRs to migrate?',
+            'choices': openPRsRepoList
+        }
+    ]
+    whichOpenPRs = prompt(whichOpenPRsQuestion)['whichOpenPRs']
+    selectedOpenPRs = list(filter( lambda repo: repo["name"] in whichOpenPRs, openPRs))
+    repositories = accepts + selectedOpenPRs
 
-logBright(Fore.GREEN, "Migration successfully completed - {} repositories copied to GitHub".format(acceptedNumber))
+    # Confirm migration of accepted repos and selected repos with Open PRs
+    continueMigrationQuestion = [
+        {
+            'type': 'confirm',
+            'name': 'continueMigration',
+            'message': "Continue with migrating [{} accepted repos and {} selected repos woth Open PRs]?".format(acceptedNumber, len(selectedOpenPRs)),
+            'default': True
+        }
+    ]
+    continueMigration = prompt(continueMigrationQuestion)['continueMigration']
+    if(not continueMigration):
+        logBright(Fore.BLUE, "No repositories migrated")
+        exit(0)
+
+# Migrate specified repositories
+reposNumber = len(repositories)
+logLight(Fore.BLUE, "Migrating {} repositories...".format(reposNumber))
+migrateRepos(repositories, pushToOrg, bitbucketAccountID, bitbucketAccessToken, githubAccountID, githubAccessToken)
+
+logBright(Fore.GREEN, "Migration successfully completed - {} repositories copied to GitHub".format(reposNumber))
