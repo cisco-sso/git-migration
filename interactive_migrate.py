@@ -82,9 +82,9 @@ print(
     alreadyExistingNumber
 ) + Style.RESET_ALL)
 
-logBright(Fore.BLUE, "Close all PRs before migrating a repo.")
+logBright(Fore.BLUE, "Recommended to close all PRs before migrating a repo.")
 
-if(acceptedNumber==0):
+if(acceptedNumber+openPRsNumber==0):
     logBright(Fore.BLUE, "No repositories migrated")
     exit(0)
 
@@ -92,21 +92,31 @@ if(acceptedNumber==0):
 acceptedOnly = "Accepted repos only"
 acceptedAllOpenPRs = "Accepted repos and ALL repos with Open PRs"
 acceptedSomeOpenPRs = "Accepted repos and SELECTED repos with Open PRs"
+allOpenPRs = "ALL repos with Open PRs"
+someOpenPRs = "SELECTED repos with Open PRs"
+
+whichMigrateQuestionChoices = []
+
+if (acceptedNumber == 0):
+    whichMigrateQuestionChoices.append(allOpenPRs)
+    whichMigrateQuestionChoices.append(someOpenPRs)
+else:
+    whichMigrateQuestionChoices.append(acceptedOnly)
+    if (openPRsNumber != 0):
+        whichMigrateQuestionChoices.append(acceptedAllOpenPRs)
+        whichMigrateQuestionChoices.append(acceptedSomeOpenPRs)
+
 whichMigrateQuestion = [
     {
         'type': 'list',
         'name': 'whichMigrate',
         'message': "Which repositories to migrate? (Pull Requests won't be migrated)",
-        'choices': [
-            acceptedOnly,
-            acceptedAllOpenPRs,
-            acceptedSomeOpenPRs
-        ]
+        'choices': whichMigrateQuestionChoices
     }
 ]
 whichMigrate = prompt(whichMigrateQuestion)["whichMigrate"]
 
-if (whichMigrate!=acceptedSomeOpenPRs):
+if (not (whichMigrate == acceptedSomeOpenPRs or whichMigrate == someOpenPRs)):
     # Confirm migration of accepted repos
     continueMigrationQuestion = [
         {
@@ -120,9 +130,12 @@ if (whichMigrate!=acceptedSomeOpenPRs):
     if(not continueMigration):
         logBright(Fore.BLUE, "No repositories migrated")
         exit(0)
-    # ALL Open PR repos
+    # Accepted and ALL Open PR repos
     elif (whichMigrate==acceptedAllOpenPRs):
         repositories = accepts + openPRs
+    # ALL Open PR Repos
+    elif (whichMigrate==allOpenPRs):
+        repositories = openPRs
     # Only accepted repos
     else:
         repositories = accepts
@@ -139,14 +152,23 @@ else:
     ]
     whichOpenPRs = prompt(whichOpenPRsQuestion)['whichOpenPRs']
     selectedOpenPRs = list(filter( lambda repo: repo["name"] in whichOpenPRs, openPRs))
-    repositories = accepts + selectedOpenPRs
+    # Only SELECTED Open PR repos
+    if (whichMigrate == someOpenPRs):
+        repositories = selectedOpenPRs
+    # Accepted and SELECTED Open PR repos
+    else:
+        repositories = accepts + selectedOpenPRs
 
+    reposNumber = len(repositories)
+    if (reposNumber == 0):
+        logBright(Fore.BLUE, "No repositories selected to migrate")
+        exit(0) 
     # Confirm migration of accepted repos and selected repos with Open PRs
     continueMigrationQuestion = [
         {
             'type': 'confirm',
             'name': 'continueMigration',
-            'message': "Continue with migrating [{} accepted repos and {} selected repos woth Open PRs]?".format(acceptedNumber, len(selectedOpenPRs)),
+            'message': "Continue with migrating [{} accepted repos and {} selected repos with Open PRs]?".format(acceptedNumber, len(selectedOpenPRs)),
             'default': True
         }
     ]
@@ -155,8 +177,13 @@ else:
         logBright(Fore.BLUE, "No repositories migrated")
         exit(0)
 
+
 # Migrate specified repositories
 reposNumber = len(repositories)
+if (reposNumber == 0):
+    logBright(Fore.BLUE, "No repositories selected to migrate")
+    exit(0)
+
 logLight(Fore.BLUE, "Migrating {} repositories...".format(reposNumber))
 migrateRepos(repositories, pushToOrg, bitbucketAccountID, bitbucketAccessToken, githubAccountID, githubAccessToken)
 
