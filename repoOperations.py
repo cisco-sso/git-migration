@@ -6,7 +6,7 @@ import requests
 from colorama import Fore, Style
 
 # Custom imports
-from utils import logBright, logLight, isHTTP
+from utils import logBright, logLight, isHTTP, remove_readonly
 
 # Returns list of all projects on BitBucket
 def getBitbucketProjects(bitbucketAccessToken):
@@ -238,7 +238,11 @@ def migrateRepos(repositories, pushToOrg, bitbucketAccountID, bitbucketAccessTok
 
         # Remove any existing folder with same name
         if(os.path.isdir(bitbucketName)):
-            shutil.rmtree(bitbucketName, ignore_errors=True)
+            try:
+                shutil.rmtree(bitbucketName, onerror=remove_readonly)
+            except:
+                logLight(Fore.BLUE, "Unable to delete pre-existing folder with same name: Retry after deleting it manually.")
+                continue
         # Bare clone the repository
         bitbucketLinkDomain = bitbucketLink.split("//")[1]
         os.system("git clone --bare https://{}:{}@{}".format(bitbucketAccountID, bitbucketAccessToken, bitbucketLinkDomain))
@@ -275,10 +279,17 @@ def migrateRepos(repositories, pushToOrg, bitbucketAccountID, bitbucketAccessTok
 
         # Remove local clone of repo
         os.chdir("..")
-        shutil.rmtree("{}.git".format(bitbucketName))
+        try:
+            shutil.rmtree("{}.git".format(bitbucketName), onerror=remove_readonly)
+        except:
+            logLight(Fore.BLUE, "Unable to delete the locally cloned repo: Try doing it manually.")
+            continue
 
     # Remove temporary folder
     if(not isDir):
         os.chdir("..")
-        shutil.rmtree("migration_temp")
+        try:
+            shutil.rmtree("migration_temp", onerror=remove_readonly)
+        except:
+            logLight(Fore.BLUE, "Unable to delete the migration_temp folder: Try doing it manually.")
     return True

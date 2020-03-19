@@ -1,6 +1,8 @@
 import json
 import requests
-from colorama import init, Fore, Style
+import os
+import stat
+from colorama import Fore, Style
 
 # Filter function to get http links to clone repo
 def isHTTP(link):
@@ -8,6 +10,11 @@ def isHTTP(link):
         return True
     else:
         return False
+
+# Error handler for shutil.rmtree on windows READ-ONLY paths
+def remove_readonly(func, path, excinfo):
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
 
 # Give colored print statements
 def logBright(color, string):
