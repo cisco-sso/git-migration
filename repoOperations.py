@@ -296,6 +296,7 @@ def migrateRepos(repositories, pushToOrg, bitbucketAccountID, bitbucketAccessTok
 
 # Assign the selected repos to selected teams in the organization
 def assignReposToTeams(repoAssignment, githubAccessToken):
+    adminPermissions = { 'permission': 'admin' }
     assignResult = {}
     for team, repos in repoAssignment.items(): # key, value :: team, repos
         logLight(Fore.YELLOW, "Assigning repos to {} team".format(team))
@@ -315,6 +316,7 @@ def assignReposToTeams(repoAssignment, githubAccessToken):
             # Assign repo to team
             assignResponse = requests.put(
                 "https://***REMOVED***/api/v3/teams/{}/repos/***REMOVED***/{}".format(teamID, repo),
+                data=json.dumps(adminPermissions),
                 headers={"Authorization": "Bearer {}".format(githubAccessToken)}
             )
             if(assignResponse.status_code != 204):
