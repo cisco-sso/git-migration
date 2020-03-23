@@ -293,3 +293,42 @@ def migrateRepos(repositories, pushToOrg, bitbucketAccountID, bitbucketAccessTok
         except:
             logLight(Fore.BLUE, "Unable to delete the migration_temp folder: Try doing it manually.")
     return True
+
+# Assign the selected repos to selected teams in the organization
+def assignReposToTeams(repoAssignment, githubAccessToken):
+    assignResult = {}
+    for team, repos in repoAssignment.items(): # key, value :: team, repos
+        logLight(Fore.YELLOW, "Assigning repos to {} team".format(team))
+
+        # Get Team's ID
+        teamInfo = requests.get(
+            "https://***REMOVED***/api/v3/orgs/***REMOVED***/teams/{}".format(team),
+            headers={"Authorization": "Bearer {}".format(githubAccessToken)}
+        )
+        teamInfo = json.loads(teamInfo.text)
+        teamID = teamInfo['id']
+        # print("obtained", team, teamID)
+
+        successCount = 0
+        failureCount = 0
+        for repo in repos:
+            # Assign repo to team
+            assignResponse = requests.put(
+                "https://***REMOVED***/api/v3/teams/{}/repos/***REMOVED***/{}".format(teamID, repo),
+                headers={"Authorization": "Bearer {}".format(githubAccessToken)}
+            )
+            if(assignResponse.status_code != 204):
+                failureCount += 1
+                logLight(Fore.RED, "Failed to assign {} repo to {} team: Error code {}".format(repo, team, assignResponse.status_code))
+            else:
+                successCount += 1
+                logLight(Fore.GREEN, "Successfully assigned {} repo to {} team".format(repo, team))
+        assignResult[team] = {
+            'success': successCount,
+            'failure': failureCount
+        }
+        logBright(Fore.BLUE, "\nAssigned repos to {} team:".format(team))
+        print(
+            Style.BRIGHT + Fore.GREEN + "Success: {}\t".format(successCount) + Fore.RED + "Failure: {} (Check if repo exists on ***REMOVED*** org, try assigning manually)\n".format(failureCount) + Style.RESET_ALL
+        )
+    return assignResult

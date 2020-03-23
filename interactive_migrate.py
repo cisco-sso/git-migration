@@ -9,7 +9,7 @@ from colorama import init, Fore, Style
 # Custom imports
 from utils import logBright, logLight
 from credOperations import getCredentials, checkCredentials, checkCredsForPush
-from repoOperations import getBitbucketProjects, getBitbucketRepos, processRepos, migrateRepos
+from repoOperations import getBitbucketProjects, getBitbucketRepos, processRepos, migrateRepos, assignReposToTeams
 
 # To enable colored printing on Windows as well
 init()
@@ -188,3 +188,60 @@ logLight(Fore.BLUE, "Migrating {} repositories...".format(reposNumber))
 migrateRepos(repositories, pushToOrg, bitbucketAccountID, bitbucketAccessToken, githubAccountID, githubAccessToken)
 
 logBright(Fore.GREEN, "Migration successfully completed - {} repositories copied to GitHub".format(reposNumber))
+
+if (not pushToOrg):
+    exit(0)
+
+confirmAssignToTeamQuestion = [
+    {
+        'type': 'confirm',
+        'name':  'confirmAssignToTeam',
+        'message': 'Do you want to assign some of the migrated repos to different teams?',
+        'default': True
+    }
+]
+confirmAssignToTeam = prompt(confirmAssignToTeamQuestion)['confirmAssignToTeam']
+
+if (not confirmAssignToTeam):
+    logLight(Fore.BLUE, "None of the {} migrated repositories assigned to any teams".format(55))
+    exit(0)
+
+teamsList = requests.get(
+    "https://***REMOVED***/api/v3/orgs/***REMOVED***/teams",
+    headers={"Authorization": "Bearer {}".format(githubAccessToken)}
+)
+teamsList = json.loads(teamsList.text)
+teamsList = [ {'name':team['slug']} for team in teamsList]
+
+selectTeamsQuestion = [
+    {
+        'type': 'checkbox',
+        'name': 'selectTeams',
+        'message': 'Select the teams to which you want to assign the repos',
+        'choices': teamsList
+    }
+]
+selectedTeams = prompt(selectTeamsQuestion)['selectTeams']
+
+allMigratedRepos = [ { 'name': repo['name'] } for repo in repositories ]
+
+repoAssignment = {}
+
+for team in selectedTeams:
+    reposForTeamQuestion = [
+        {
+            'type': 'checkbox',
+            'name': 'reposForTeams',
+            'message': 'Select the repos to assign to {} team'.format(team),
+            'choices': allMigratedRepos
+        }
+    ]
+    reposForTeams = prompt(reposForTeamQuestion)['reposForTeams']
+    if (len(reposForTeams)!=0):
+        repoAssignment[team] = reposForTeams
+    else:
+        logLight(Fore.BLUE, "No repositories selected to assign to {} team".format(team))
+
+assignResult = assignReposToTeams(repoAssignment, githubAccessToken)
+
+

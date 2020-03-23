@@ -2,6 +2,16 @@
 
 
 
+- Migrate repositories from BitBucket projects to GitHub Enterprise.
+
+- Migrate repositories **to your personal GitHub Enterprise account or to the CX Engineering organization**.
+
+- If migrating to the ***REMOVED*** org, the tool also lets you **assign these repositories to one or more teams within the ***REMOVED*** org**.
+
+- By default, the tool **blocks the migration of repositories with open pull requests** on BitBucket. **To override this blockage** and migrate the codebase without the PR information anyway, use the `interactive_migrate.py` script which gives an option for this.
+
+  
+
 ### Prerequisites:
 
 - python3, pip3
@@ -37,21 +47,21 @@ In the root of the project, run:
 
 
 
-### `migrate.py` - migrate all repositories from one project
+### `interactive_migrate.py` - migrate selected repositories from one project (RECOMMENDED)
 
-After this, you can run `python migrate.py YOUR_PROJECT_KEY` to migrate the all repositories in the project over to the github account.
-
-The Project Key can be found in the *<u>BitBucket Dashboard > Projects</u>* Tab.
-
-**Migrating to ***REMOVED*** org:** By default, repositories are migrated to your personal GitHub Enterprise account, pass the `--***REMOVED***` or `-c` flag while running the script to migrate repositories to the ***REMOVED*** Organization instead.
+After this, to have a good interactive experience, you can run `python interactive_migrate.py` to choose migration location, cherrypick the repositories to migrate, migrate repositories with open PRs and assign repositories to different teams as and when you migrate. You can migrate just one repo, or a subset of repos, or all repos of your project with this script.
 
 ------
 
 
 
-### `interactive_migrate.py` - migrate selected repositories from one project
+### `migrate.py` - migrate all repositories from one project
 
-Alternatively, to have a better interactive experience, you can run `python interactive_migrate.py` to choose migration location and cherrypick the repositories to migrate. You can migrate just one repo, or a subset of repos,  or all repos of your project with this script.
+Alternatively, you can run `python migrate.py YOUR_PROJECT_KEY` to migrate the all repositories in the project over to the github account.
+
+The Project Key can be found in the *<u>BitBucket Dashboard > Projects</u>* Tab.
+
+**Migrating to ***REMOVED*** org:** By default, repositories are migrated to your personal GitHub Enterprise account, pass the `--***REMOVED***` or `-c` flag while running the script to migrate repositories to the ***REMOVED*** Organization instead.
 
 ------
 
