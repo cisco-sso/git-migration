@@ -8,7 +8,7 @@
 
 - If migrating to the ***REMOVED*** org, the tool also lets you **assign these repositories to one or more teams within the ***REMOVED*** org**.
 
-- By default, the tool **blocks the migration of repositories with open pull requests** on BitBucket. **To override this blockage** and migrate the codebase without the PR information anyway, use the `interactive_migrate.py` script which gives an option for this.
+- By default, the tool **blocks the migration of repositories with open pull requests** on BitBucket. Both `migrate.py` and `interactive_migrate.py` give an option **to override this blockage** if necessary.
 
   
 
