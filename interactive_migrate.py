@@ -203,22 +203,22 @@ confirmAssignToTeamQuestion = [
 confirmAssignToTeam = prompt(confirmAssignToTeamQuestion)['confirmAssignToTeam']
 
 if (not confirmAssignToTeam):
-    logLight(Fore.BLUE, "None of the {} migrated repositories assigned to any teams".format(55))
+    logLight(Fore.BLUE, "None of the {} migrated repositories assigned to any teams".format(reposNumber))
     exit(0)
 
-teamsList = requests.get(
+teamsInfoList = requests.get(
     "https://***REMOVED***/api/v3/orgs/***REMOVED***/teams",
     headers={"Authorization": "Bearer {}".format(githubAccessToken)}
 )
-teamsList = json.loads(teamsList.text)
-teamsList = [ {'name':team['slug']} for team in teamsList]
+teamsInfoList = json.loads(teamsInfoList.text)
+teamsChecklist = [ {'name':team['slug']} for team in teamsInfoList]
 
 selectTeamsQuestion = [
     {
         'type': 'checkbox',
         'name': 'selectTeams',
         'message': 'Select the teams to which you want to assign the repos',
-        'choices': teamsList
+        'choices': teamsChecklist
     }
 ]
 selectedTeams = prompt(selectTeamsQuestion)['selectTeams']
