@@ -6,7 +6,7 @@ import requests
 from colorama import Fore, Style
 
 # Custom imports
-from utils import logBright, logLight, isHTTP, remove_readonly
+from utils import logBright, logLight, isHTTP, remove_readonly, remove_control_characters
 
 # Returns list of all projects on BitBucket
 def getBitbucketProjects(bitbucketAccessToken):
@@ -252,11 +252,11 @@ def migrateRepos(repositories, pushToOrg, bitbucketAccountID, bitbucketAccessTok
 
         # API call to make new remote repo on GitHub
         requestPayload = {
-            "name": bitbucketName,
+            "name": remove_control_characters(bitbucketName),
             "private": True
         }
         if("description" in repo.keys()):
-            requestPayload["description"] = repo["description"]
+            requestPayload["description"] = remove_control_characters(repo["description"])
         
         if(pushToOrg):
             # Create new repo of same name on GitHub ***REMOVED*** Org

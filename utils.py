@@ -1,5 +1,6 @@
 import json
 import requests
+import unicodedata
 import os
 import stat
 from colorama import Fore, Style
@@ -15,6 +16,10 @@ def isHTTP(link):
 def remove_readonly(func, path, excinfo):
     os.chmod(path, stat.S_IWRITE)
     func(path)
+
+# Remove control characters from a string (otherwise GHE API calls fail)
+def remove_control_characters(s):
+    return "".join(ch for ch in s if unicodedata.category(ch)[0]!="C")
 
 # Give colored print statements
 def logBright(color, string):
