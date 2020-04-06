@@ -78,8 +78,8 @@ def processRepos(repositories, projectKey, pushToOrg, bitbucketAccessToken, gith
         repoResponse = json.loads(repoResponse.text)
         if("description" in repoResponse.keys()):
             repoInfo["description"] = repoResponse["description"]
-        else:
-            repoInfo["description"] = None
+        # else:
+        #     repoInfo["description"] = None
         link = list(filter(isHTTP, repoResponse["links"]["clone"]))
         repoInfo["cloneLink"] = link[0]["href"]
 
@@ -173,8 +173,8 @@ def getAndProcessBitbucketRepos(projectKey, pushToOrg, bitbucketAccessToken, git
             repoResponse = json.loads(repoResponse.text)
             if("description" in repoResponse.keys()):
                 repoInfo["description"] = repoResponse["description"]
-            else:
-                repoInfo["description"] = None
+            # else:
+            #     repoInfo["description"] = None
             link = list(filter(isHTTP, repoResponse["links"]["clone"]))
             repoInfo["cloneLink"] = link[0]["href"]
 
