@@ -9,8 +9,12 @@ import colorama as color
 
 # Custom imports
 import utils
-import credOperations as credOps
-import repoOperations as repoOps
+import credOperations
+import repoOperations
+
+# Objects for operations related to credentials and repository actions
+credOps = credOperations.credOps()
+repoOps = repoOperations.repoOps()
 
 # To enable colored printing on Windows as well
 color.init()
@@ -26,7 +30,7 @@ parser.add_argument('project', metavar='P', type=str, help='KEY of BitBucket pro
 args = parser.parse_args()
 
 projectKey = args.project
-utils.logBright(color.Fore.YELLOW , 'Target project: ' + projectKey)
+utils.LogUtils.logBright(color.Fore.YELLOW , 'Target project: ' + projectKey)
 
 # Check credentials for given project
 if (not credOps.checkCredentials(args.project, bitbucketAccessToken, githubAccessToken)):
@@ -53,7 +57,7 @@ if (pushToOrg):
     ]
     confirmMigrate = inquirer.prompt(confirmMigrateQuestion)['confirmMigrate']
     if(not confirmMigrate):
-        utils.logLight(color.Fore.BLUE, "Rerun script without --***REMOVED*** flag to migrate to GitHub personal Account")
+        utils.LogUtils.logLight(color.Fore.BLUE, "Rerun script without --***REMOVED*** flag to migrate to GitHub personal Account")
         exit(0)
 else:
     confirmMigrateQuestion = [
@@ -66,7 +70,7 @@ else:
     ]
     confirmMigrate = inquirer.prompt(confirmMigrateQuestion)['confirmMigrate']
     if(not confirmMigrate):
-        utils.logLight(color.Fore.BLUE, "Rerun script with --***REMOVED*** flag to migrate to GitHub ***REMOVED*** Org")
+        utils.LogUtils.logLight(color.Fore.BLUE, "Rerun script with --***REMOVED*** flag to migrate to GitHub ***REMOVED*** Org")
         exit(0)
 
 # Check repos and get accepted and rejected ones
@@ -83,10 +87,10 @@ print(
     alreadyExistingNumber
 ) + color.Style.RESET_ALL)
 
-utils.logBright(color.Fore.BLUE, "Recommended to close all PRs before migrating a repo.")
+utils.LogUtils.logBright(color.Fore.BLUE, "Recommended to close all PRs before migrating a repo.")
 
 if(acceptedNumber+openPRsNumber==0):
-    utils.logBright(color.Fore.BLUE, "No repositories migrated")
+    utils.LogUtils.logBright(color.Fore.BLUE, "No repositories migrated")
     exit(0)
 
 # Ask whether to migrate repos with OpenPRs
@@ -129,7 +133,7 @@ if (not (whichMigrate == acceptedSomeOpenPRs or whichMigrate == someOpenPRs)):
     ]
     continueMigration = inquirer.prompt(continueMigrationQuestion)['continueMigration']
     if(not continueMigration):
-        utils.logBright(color.Fore.BLUE, "No repositories migrated")
+        utils.LogUtils.logBright(color.Fore.BLUE, "No repositories migrated")
         exit(0)
     # Accepted and ALL Open PR repos
     elif (whichMigrate==acceptedAllOpenPRs):
@@ -162,7 +166,7 @@ else:
 
     reposNumber = len(repositories)
     if (reposNumber == 0):
-        utils.logBright(color.Fore.BLUE, "No repositories selected to migrate")
+        utils.LogUtils.logBright(color.Fore.BLUE, "No repositories selected to migrate")
         exit(0) 
     # Confirm migration of accepted repos and selected repos with Open PRs
     continueMigrationQuestion = [
@@ -175,19 +179,19 @@ else:
     ]
     continueMigration = inquirer.prompt(continueMigrationQuestion)['continueMigration']
     if(not continueMigration):
-        utils.logBright(color.Fore.BLUE, "No repositories migrated")
+        utils.LogUtils.logBright(color.Fore.BLUE, "No repositories migrated")
         exit(0)
 
 # Migrate specified repositories
 reposNumber = len(repositories)
 if (reposNumber == 0):
-    utils.logBright(color.Fore.BLUE, "No repositories selected to migrate")
+    utils.LogUtils.logBright(color.Fore.BLUE, "No repositories selected to migrate")
     exit(0)
 
-utils.logLight(color.Fore.BLUE, "Migrating {} repositories...".format(reposNumber))
+utils.LogUtils.logLight(color.Fore.BLUE, "Migrating {} repositories...".format(reposNumber))
 repoOps.migrateRepos(repositories, pushToOrg, bitbucketAccountID, bitbucketAccessToken, githubAccountID, githubAccessToken)
 
-utils.logBright(color.Fore.GREEN, "Migration successfully completed - {} repositories copied to GitHub".format(reposNumber))
+utils.LogUtils.logBright(color.Fore.GREEN, "Migration successfully completed - {} repositories copied to GitHub".format(reposNumber))
 
 # No assignment to teams if repos migrated to personal account
 if (not pushToOrg):
@@ -209,7 +213,7 @@ assignToTeamsQuestion = [
 assignToTeams = inquirer.prompt(assignToTeamsQuestion)['assignToTeams']
 
 if (assignToTeams == noAssign):
-    utils.logLight(color.Fore.BLUE, "None of the {} migrated repositories assigned to any teams".format(reposNumber))
+    utils.LogUtils.logLight(color.Fore.BLUE, "None of the {} migrated repositories assigned to any teams".format(reposNumber))
     exit(0)
 
 # Get list of all teams from GHE ***REMOVED*** org
@@ -259,6 +263,6 @@ elif (assignToTeams == someAssign):
         if (len(reposForTeams)!=0):
             repoAssignment[team] = reposForTeams
         else:
-            utils.logLight(color.Fore.BLUE, "No repositories selected to assign to {} team".format(team))
+            utils.LogUtils.logLight(color.Fore.BLUE, "No repositories selected to assign to {} team".format(team))
 
 assignResult = repoOps.assignReposToTeams(repoAssignment, githubAccessToken)
