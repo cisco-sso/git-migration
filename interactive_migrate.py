@@ -71,7 +71,7 @@ reposQuestion = [
 repoAnswers = inquirer.prompt(reposQuestion)
 
 # Process repos to check for Open PRs or pre-existing repos on GitHub with same name
-accepts, openPRs, alreadyExisting = repoOps.processRepos(repoAnswers, projectKey, pushToOrg, bitbucketAccessToken, githubAccountID, githubAccessToken)
+accepts, openPRs, alreadyExisting = repoOps.processBitbucketRepos(repoAnswers["repos"], projectKey, pushToOrg, bitbucketAccessToken, githubAccountID, githubAccessToken)
 acceptedNumber = len(accepts)
 openPRsNumber = len(openPRs)
 alreadyExistingNumber = len(alreadyExisting)

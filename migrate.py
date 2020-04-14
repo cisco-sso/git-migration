@@ -70,7 +70,8 @@ else:
         exit(0)
 
 # Check repos and get accepted and rejected ones
-accepts, openPRs, alreadyExisting = repoOps.getAndProcessBitbucketRepos(projectKey, pushToOrg, bitbucketAccessToken, githubAccountID, githubAccessToken)
+repoNames = repoOps.getBitbucketRepos(projectKey, bitbucketAccessToken)
+accepts, openPRs, alreadyExisting = repoOps.processBitbucketRepos(repoNames, projectKey, pushToOrg, bitbucketAccessToken, githubAccountID, githubAccessToken)
 
 acceptedNumber = len(accepts)
 openPRsNumber = len(openPRs)
