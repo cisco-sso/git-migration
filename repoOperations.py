@@ -8,6 +8,9 @@ import colorama as color
 # Custom imports
 import utils
 
+# Base URLs for APIs
+bitbucketAPI, githubAPI = utils.getAPILinks()
+
 # Returns list of all projects on BitBucket
 def getBitbucketProjects(bitbucketAccessToken):
     projectNames = []
@@ -15,7 +18,7 @@ def getBitbucketProjects(bitbucketAccessToken):
     start = 0
     # Get list of projects
     while(not isLastPage):
-        projectsUrl = "https://***REMOVED***/bitbucket/rest/api/1.0/projects/?start={}".format(start)
+        projectsUrl = bitbucketAPI+"/projects/?start={}".format(start)
         projects = requests.get(
             projectsUrl,
             headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)}
@@ -39,7 +42,7 @@ def getBitbucketRepos(projectKey, bitbucketAccessToken):
     # Get list of all repos
     while(not isLastPage):
         # Get list of repos under the mentioned project on BitBucket
-        projectReposLink = "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos?start={}".format(projectKey, start)
+        projectReposLink = bitbucketAPI+"/projects/{}/repos?start={}".format(projectKey, start)
         projectRepos = requests.get(
             projectReposLink,
             headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)}
@@ -72,7 +75,7 @@ def processRepos(repositories, projectKey, pushToOrg, bitbucketAccessToken, gith
         }
         repoInfo["name"] = repoName
         repoResponse = requests.get(
-            "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos/{}".format(projectKey, repoName),
+            bitbucketAPI+"/projects/{}/repos/{}".format(projectKey, repoName),
             headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)}
         )
         repoResponse = json.loads(repoResponse.text)
@@ -86,7 +89,7 @@ def processRepos(repositories, projectKey, pushToOrg, bitbucketAccessToken, gith
 
         if (pushToOrg):
             # Check if same repository already exists on GitHub ***REMOVED*** Org
-            githubOrgRepoCheckLink = "https://***REMOVED***/api/v3/repos/***REMOVED***/{}".format(repoName)
+            githubOrgRepoCheckLink = githubAPI+"/repos/***REMOVED***/{}".format(repoName)
             githubOrgRepoCheck = requests.get(
                 githubOrgRepoCheckLink,
                 headers={"Authorization": "Bearer {}".format(githubAccessToken)}
@@ -99,7 +102,7 @@ def processRepos(repositories, projectKey, pushToOrg, bitbucketAccessToken, gith
                 continue
         else:
             # Check if same repository already exists on GitHub
-            githubRepoCheckLink = "https://***REMOVED***/api/v3/repos/{}/{}".format(githubAccountID, repoName)
+            githubRepoCheckLink = githubAPI+"/repos/{}/{}".format(githubAccountID, repoName)
             githubRepoCheck = requests.get(
                 githubRepoCheckLink,
                 headers={"Authorization": "Bearer {}".format(githubAccessToken)}
@@ -112,7 +115,7 @@ def processRepos(repositories, projectKey, pushToOrg, bitbucketAccessToken, gith
                 continue
 
         # Check if repository has open PRs on BitBucket
-        repoPRLink = "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos/{}/pull-requests/".format(projectKey, repoName)
+        repoPRLink = bitbucketAPI+"/projects/{}/repos/{}/pull-requests/".format(projectKey, repoName)
         pullRequests = requests.get(
             repoPRLink,
             headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)}
@@ -145,7 +148,7 @@ def getAndProcessBitbucketRepos(projectKey, pushToOrg, bitbucketAccessToken, git
     utils.logLight(color.Fore.BLUE, "\nAquiring and checking repo metadata...")
     while(not isLastPage):
         # Get list of repos under the mentioned project on BitBucket
-        projectReposLink = "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos?start={}".format(projectKey, start)
+        projectReposLink = bitbucketAPI+"/projects/{}/repos?start={}".format(projectKey, start)
         projectRepos = requests.get(
             projectReposLink,
             headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)}
@@ -167,7 +170,7 @@ def getAndProcessBitbucketRepos(projectKey, pushToOrg, bitbucketAccessToken, git
             }
             repoInfo["name"] = repoName
             repoResponse = requests.get(
-                "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos/{}".format(projectKey, repoName),
+                bitbucketAPI+"/projects/{}/repos/{}".format(projectKey, repoName),
                 headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)}
             )
             repoResponse = json.loads(repoResponse.text)
@@ -181,7 +184,7 @@ def getAndProcessBitbucketRepos(projectKey, pushToOrg, bitbucketAccessToken, git
 
             if (pushToOrg):
                 # Check if same repository already exists on GitHub ***REMOVED*** Org
-                githubOrgRepoCheckLink = "https://***REMOVED***/api/v3/repos/***REMOVED***/{}".format(repoName)
+                githubOrgRepoCheckLink = githubAPI+"/repos/***REMOVED***/{}".format(repoName)
                 githubOrgRepoCheck = requests.get(
                     githubOrgRepoCheckLink,
                     headers={"Authorization": "Bearer {}".format(githubAccessToken)}
@@ -194,7 +197,7 @@ def getAndProcessBitbucketRepos(projectKey, pushToOrg, bitbucketAccessToken, git
                     continue
             else:
                 # Check if same repository already exists on GitHub
-                githubRepoCheckLink = "https://***REMOVED***/api/v3/repos/{}/{}".format(githubAccountID, repoName)
+                githubRepoCheckLink = githubAPI+"/repos/{}/{}".format(githubAccountID, repoName)
                 githubRepoCheck = requests.get(
                     githubRepoCheckLink,
                     headers={"Authorization": "Bearer {}".format(githubAccessToken)}
@@ -207,7 +210,7 @@ def getAndProcessBitbucketRepos(projectKey, pushToOrg, bitbucketAccessToken, git
                     continue
 
             # Check if repository has open PRs on BitBucket
-            repoPRLink = "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos/{}/pull-requests/".format(projectKey, repoName)
+            repoPRLink = bitbucketAPI+"/projects/{}/repos/{}/pull-requests/".format(projectKey, repoName)
             pullRequests = requests.get(
                 repoPRLink,
                 headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)}
@@ -261,14 +264,14 @@ def migrateRepos(repositories, pushToOrg, bitbucketAccountID, bitbucketAccessTok
         if(pushToOrg):
             # Create new repo of same name on GitHub ***REMOVED*** Org
             gitResponse = requests.post(
-                "https://***REMOVED***/api/v3/orgs/***REMOVED***/repos",
+                githubAPI+"/orgs/***REMOVED***/repos",
                 data=json.dumps(requestPayload),
                 headers={"Authorization": "Bearer {}".format(githubAccessToken)}
             )
         else:
             # Create new repo of same name on GitHub Account
             gitResponse = requests.post(
-                "https://***REMOVED***/api/v3/user/repos",
+                githubAPI+"/user/repos",
                 data=json.dumps(requestPayload),
                 headers={"Authorization": "Bearer {}".format(githubAccessToken)}
             )
@@ -296,6 +299,15 @@ def migrateRepos(repositories, pushToOrg, bitbucketAccountID, bitbucketAccessTok
             utils.logLight(color.Fore.BLUE, "Unable to delete the migration_temp folder: Try doing it manually.")
     return True
 
+# Get list of all teams from GHE ***REMOVED*** org
+def getTeamsInfo(githubAccessToken):
+    teamsInfoList = requests.get(
+        githubAPI+"/orgs/***REMOVED***/teams",
+        headers={"Authorization": "Bearer {}".format(githubAccessToken)}
+    )
+    teamsInfoList = json.loads(teamsInfoList.text)
+    return teamsInfoList
+
 # Assign the selected repos to selected teams in the organization
 def assignReposToTeams(repoAssignment, githubAccessToken):
     adminPermissions = { 'permission': 'admin' }
@@ -305,7 +317,7 @@ def assignReposToTeams(repoAssignment, githubAccessToken):
 
         # Get Team's ID
         teamInfo = requests.get(
-            "https://***REMOVED***/api/v3/orgs/***REMOVED***/teams/{}".format(team),
+            githubAPI+"/orgs/***REMOVED***/teams/{}".format(team),
             headers={"Authorization": "Bearer {}".format(githubAccessToken)}
         )
         teamInfo = json.loads(teamInfo.text)
@@ -317,7 +329,7 @@ def assignReposToTeams(repoAssignment, githubAccessToken):
         for repo in repos:
             # Assign repo to team
             assignResponse = requests.put(
-                "https://***REMOVED***/api/v3/teams/{}/repos/***REMOVED***/{}".format(teamID, repo),
+                githubAPI+"/teams/{}/repos/***REMOVED***/{}".format(teamID, repo),
                 data=json.dumps(adminPermissions),
                 headers={"Authorization": "Bearer {}".format(githubAccessToken)}
             )

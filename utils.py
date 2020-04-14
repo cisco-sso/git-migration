@@ -5,6 +5,15 @@ import os
 import stat
 import colorama as color
 
+# Read and return API base URLs from apis.json
+def getAPILinks():
+    # Get required API Links from JSON file
+    with open("./apis.json") as file:
+        apis = json.load(file)
+    bitbucketAPI = apis['DEFAULT']['BitBucket_API_BaseURL']
+    githubAPI = apis['DEFAULT']['GitHub_API_BaseURL']
+    return bitbucketAPI, githubAPI
+
 # Filter function to get http links to clone repo
 def isHTTP(link):
     if(link["name"]=="http" or link["name"]=="https"):

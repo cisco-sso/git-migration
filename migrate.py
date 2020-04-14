@@ -212,11 +212,7 @@ if (assignToTeams == noAssign):
     exit(0)
 
 # Get list of all teams from GHE ***REMOVED*** org
-teamsInfoList = requests.get(
-    "https://***REMOVED***/api/v3/orgs/***REMOVED***/teams",
-    headers={"Authorization": "Bearer {}".format(githubAccessToken)}
-)
-teamsInfoList = json.loads(teamsInfoList.text)
+teamsInfoList = repoOps.getTeamsInfo(githubAccessToken)
 teamsList = [ team['slug'] for team in teamsInfoList ]
 teamsChecklist = [ {'name':team['slug']} for team in teamsInfoList]
 

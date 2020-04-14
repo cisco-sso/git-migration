@@ -4,6 +4,9 @@ import colorama as color
 
 import utils
 
+# Base URLs for APIs
+bitbucketAPI, githubAPI = utils.getAPILinks()
+
 # Read and return IDs and Access token from credentials.json
 def getCredentials():
     # Get required credentials from JSON file
@@ -18,21 +21,21 @@ def getCredentials():
 # Check if BitBucket and GitHub tokens are valid
 def checkCredentials(project_ID, bitbucketAccessToken, githubAccessToken):
     # Check BitBucket Access Token
-    bitbucketAccessCheckLink = "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos".format(project_ID)
+    bitbucketAccessCheckLink = bitbucketAPI+"/projects/{}/repos".format(project_ID)
     bitbucketAccessCheck = requests.get(
         bitbucketAccessCheckLink,
         headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)}
     )
 
     # Check GitHub Access Token
-    githubAccessTokenCheckLink = "https://***REMOVED***/api/v3/user/repos"
+    githubAccessTokenCheckLink = githubAPI+"/user/repos"
     githubAccessTokenCheck = requests.get(
         githubAccessTokenCheckLink,
         headers={"Authorization": "Bearer {}".format(githubAccessToken)}
     )
 
     if(githubAccessTokenCheck.status_code!=200 or bitbucketAccessCheck.status_code!=200):
-        logBright(color.Fore.RED, "Something went wrong!")
+        utils.logBright(color.Fore.RED, "Something went wrong!")
         # Check which access token failed
         if(githubAccessTokenCheck.status_code==401 and bitbucketAccessCheck.status_code==401):
             utils.logBright(color.Fore.RED, "GitHub and BitBucket Access Tokens Failed: Unauthorized\nPlease check access tokens.")
@@ -55,7 +58,7 @@ def checkCredsForPush(pushToOrg, githubAccountID, githubAccessToken):
     if (pushToOrg):
         utils.logBright(color.Fore.YELLOW, 'Push destination: CX Engineering organization')
         isMember = requests.get(
-            "https://***REMOVED***/api/v3/orgs/***REMOVED***/members/{}".format(githubAccountID),
+            githubAPI+"/orgs/***REMOVED***/members/{}".format(githubAccountID),
             headers={"Authorization": "Bearer {}".format(githubAccessToken)}
         )
         # API returns 401 if the user's access token is incorrect
@@ -71,7 +74,7 @@ def checkCredsForPush(pushToOrg, githubAccountID, githubAccessToken):
     else:
         utils.logBright(color.Fore.YELLOW, 'Push destination: Personal Account - {}'.format(githubAccountID))
         # Check GitHub Access Token
-        githubAccessTokenCheckLink = "https://***REMOVED***/api/v3/users/{}/repos".format(githubAccountID)
+        githubAccessTokenCheckLink = githubAPI+"/users/{}/repos".format(githubAccountID)
         githubAccessTokenCheck = requests.get(
             githubAccessTokenCheckLink,
             headers={"Authorization": "Bearer {}".format(githubAccessToken)}

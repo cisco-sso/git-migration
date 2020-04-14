@@ -206,11 +206,7 @@ if (not confirmAssignToTeam):
     utils.logLight(color.Fore.BLUE, "None of the {} migrated repositories assigned to any teams".format(reposNumber))
     exit(0)
 
-teamsInfoList = requests.get(
-    "https://***REMOVED***/api/v3/orgs/***REMOVED***/teams",
-    headers={"Authorization": "Bearer {}".format(githubAccessToken)}
-)
-teamsInfoList = json.loads(teamsInfoList.text)
+teamsInfoList = repoOps.getTeamsInfo(githubAccessToken)
 teamsChecklist = [ {'name':team['slug']} for team in teamsInfoList]
 
 selectTeamsQuestion = [
