@@ -3,7 +3,7 @@ import requests
 import unicodedata
 import os
 import stat
-from colorama import Fore, Style
+import colorama as color
 
 # Filter function to get http links to clone repo
 def isHTTP(link):
@@ -22,8 +22,8 @@ def remove_control_characters(s):
     return "".join(ch for ch in s if unicodedata.category(ch)[0]!="C")
 
 # Give colored print statements
-def logBright(color, string):
-    print(color + Style.BRIGHT + string + Style.RESET_ALL)
+def logBright(logColor, logString):
+    print(logColor + color.Style.BRIGHT + logString + color.Style.RESET_ALL)
 
-def logLight(color, string):
-    print(color + string + Style.RESET_ALL)
+def logLight(logColor, logString):
+    print(logColor + logString + color.Style.RESET_ALL)

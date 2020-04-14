@@ -1,9 +1,8 @@
 import json
 import requests
-from colorama import init, Fore, Style
+import colorama as color
 
-
-from utils import logBright, logLight
+import utils
 
 # Read and return IDs and Access token from credentials.json
 def getCredentials():
@@ -33,44 +32,44 @@ def checkCredentials(project_ID, bitbucketAccessToken, githubAccessToken):
     )
 
     if(githubAccessTokenCheck.status_code!=200 or bitbucketAccessCheck.status_code!=200):
-        logBright(Fore.RED, "Something went wrong!")
+        logBright(color.Fore.RED, "Something went wrong!")
         # Check which access token failed
         if(githubAccessTokenCheck.status_code==401 and bitbucketAccessCheck.status_code==401):
-            logBright(Fore.RED, "GitHub and BitBucket Access Tokens Failed: Unauthorized\nPlease check access tokens.")
+            utils.logBright(color.Fore.RED, "GitHub and BitBucket Access Tokens Failed: Unauthorized\nPlease check access tokens.")
         elif(bitbucketAccessCheck.status_code==404):
-            logBright(Fore.RED, "Bitbucket Project not found: Please check the project ID.")
+            utils.logBright(color.Fore.RED, "Bitbucket Project not found: Please check the project ID.")
         elif(bitbucketAccessCheck.status_code==401):
-            logBright(Fore.RED, "BitBucket Access Token Failed: Unauthorized\nPlease check access token.")
+            utils.logBright(color.Fore.RED, "BitBucket Access Token Failed: Unauthorized\nPlease check access token.")
         elif(githubAccessTokenCheck.status_code==401):
-            logBright(Fore.RED, "GitHub Access Token Failed: Unauthorized\nPlease check access token.")
+            utils.logBright(color.Fore.RED, "GitHub Access Token Failed: Unauthorized\nPlease check access token.")
         else:
-            logBright(Fore.RED, "BitBucket Status: {}".format(bitbucketAccessCheck.status_code))
-            logBright(Fore.RED, "GitHub Status: {}".format(githubAccessTokenCheck.status_code))
+            utils.logBright(color.Fore.RED, "BitBucket Status: {}".format(bitbucketAccessCheck.status_code))
+            utils.logBright(color.Fore.RED, "GitHub Status: {}".format(githubAccessTokenCheck.status_code))
         return False
     else:
-        logBright(Fore.GREEN, "Access Tokens working!")
+        utils.logBright(color.Fore.GREEN, "Access Tokens working!")
         return True
 
 # Check if GitHub credentials allow to push to given destination
 def checkCredsForPush(pushToOrg, githubAccountID, githubAccessToken):
     if (pushToOrg):
-        logBright(Fore.YELLOW, 'Push destination: CX Engineering organization')
+        utils.logBright(color.Fore.YELLOW, 'Push destination: CX Engineering organization')
         isMember = requests.get(
             "https://***REMOVED***/api/v3/orgs/***REMOVED***/members/{}".format(githubAccountID),
             headers={"Authorization": "Bearer {}".format(githubAccessToken)}
         )
         # API returns 401 if the user's access token is incorrect
         if (isMember.status_code == 401):
-            logBright(Fore.RED, "While checking your organization membership...\nGitHub Access Token Failed: Unauthorized\nPlease check access token.")
+            utils.logBright(color.Fore.RED, "While checking your organization membership...\nGitHub Access Token Failed: Unauthorized\nPlease check access token.")
             return False
         # API returns 204 if the person checking the membership is a member of the org
         if (not isMember.status_code == 204):
-            logBright(Fore.RED, "\nYou appear to not be a member of the ***REMOVED*** Organization\nCheck the GitHub Account ID in credentials.json\nOr try again after being added as a member.")
+            utils.logBright(color.Fore.RED, "\nYou appear to not be a member of the ***REMOVED*** Organization\nCheck the GitHub Account ID in credentials.json\nOr try again after being added as a member.")
             return False
-        logBright(Fore.GREEN, "Organization membership check PASSED!")
+        utils.logBright(color.Fore.GREEN, "Organization membership check PASSED!")
         return True
     else:
-        logBright(Fore.YELLOW, 'Push destination: Personal Account - {}'.format(githubAccountID))
+        utils.logBright(color.Fore.YELLOW, 'Push destination: Personal Account - {}'.format(githubAccountID))
         # Check GitHub Access Token
         githubAccessTokenCheckLink = "https://***REMOVED***/api/v3/users/{}/repos".format(githubAccountID)
         githubAccessTokenCheck = requests.get(
@@ -78,7 +77,7 @@ def checkCredsForPush(pushToOrg, githubAccountID, githubAccessToken):
             headers={"Authorization": "Bearer {}".format(githubAccessToken)}
         )
         if (githubAccessTokenCheck.status_code == 401):
-            logBright(Fore.RED, "While checking push access to personal account...\nGitHub Access Token Failed: Unauthorized\nPlease check access token.")
+            utils.logBright(color.Fore.RED, "While checking push access to personal account...\nGitHub Access Token Failed: Unauthorized\nPlease check access token.")
             return False
-        logBright(Fore.GREEN, "Push access check to personal account PASSED!")
+        utils.logBright(color.Fore.GREEN, "Push access check to personal account PASSED!")
         return True

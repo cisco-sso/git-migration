@@ -3,10 +3,10 @@ import json
 import os
 import shutil
 import requests
-from colorama import Fore, Style
+import colorama as color
 
 # Custom imports
-from utils import logBright, logLight, isHTTP, remove_readonly, remove_control_characters
+import utils
 
 # Returns list of all projects on BitBucket
 def getBitbucketProjects(bitbucketAccessToken):
@@ -80,7 +80,7 @@ def processRepos(repositories, projectKey, pushToOrg, bitbucketAccessToken, gith
             repoInfo["description"] = repoResponse["description"]
         # else:
         #     repoInfo["description"] = None
-        link = list(filter(isHTTP, repoResponse["links"]["clone"]))
+        link = list(filter(utils.isHTTP, repoResponse["links"]["clone"]))
         repoInfo["cloneLink"] = link[0]["href"]
 
 
@@ -93,7 +93,7 @@ def processRepos(repositories, projectKey, pushToOrg, bitbucketAccessToken, gith
             )
             # Repository with a similar name already exists on GitHub
             if(githubOrgRepoCheck.status_code!=404):
-                logLight(Fore.RED, "Repo {}: Rejected - {} already exists on the ***REMOVED*** Organization".format(repoName, repoName))
+                utils.logLight(color.Fore.RED, "Repo {}: Rejected - {} already exists on the ***REMOVED*** Organization".format(repoName, repoName))
                 repoInfo["alreadyExisting"] = True
                 alreadyExisting.append(repoInfo)
                 continue
@@ -106,7 +106,7 @@ def processRepos(repositories, projectKey, pushToOrg, bitbucketAccessToken, gith
             )
             # Repository with a similar name already exists on GitHub
             if(githubRepoCheck.status_code!=404):
-                logLight(Fore.RED, "Repo {}: Rejected - {} already exists on GitHub Account".format(repoName, repoName))
+                utils.logLight(color.Fore.RED, "Repo {}: Rejected - {} already exists on GitHub Account".format(repoName, repoName))
                 repoInfo["alreadyExisting"] = True
                 alreadyExisting.append(repoInfo)
                 continue
@@ -120,13 +120,13 @@ def processRepos(repositories, projectKey, pushToOrg, bitbucketAccessToken, gith
         pullRequests = json.loads(pullRequests.text)
         # Active pull requests on Bitbucket
         if(pullRequests["size"] != 0):
-            logLight(Fore.RED, "Repo {}: Rejected - {} active PRs".format(repoName, pullRequests["size"]))
+            utils.logLight(color.Fore.RED, "Repo {}: Rejected - {} active PRs".format(repoName, pullRequests["size"]))
             repoInfo["openPRs"] = pullRequests["size"]
             openPRs.append(repoInfo)
             continue
 
         # No PRs on Bitbucket and Repo doesn't already exist on GitHub
-        logLight(Fore.GREEN, "Repo {}: Accepted".format(repoName))
+        utils.logLight(color.Fore.GREEN, "Repo {}: Accepted".format(repoName))
         accepts.append(repoInfo)
     return accepts, openPRs, alreadyExisting
 
@@ -142,7 +142,7 @@ def getAndProcessBitbucketRepos(projectKey, pushToOrg, bitbucketAccessToken, git
     openPRs = []
     alreadyExisting = []
 
-    logLight(Fore.BLUE, "\nAquiring and checking repo metadata...")
+    utils.logLight(color.Fore.BLUE, "\nAquiring and checking repo metadata...")
     while(not isLastPage):
         # Get list of repos under the mentioned project on BitBucket
         projectReposLink = "https://***REMOVED***/bitbucket/rest/api/1.0/projects/{}/repos?start={}".format(projectKey, start)
@@ -158,7 +158,7 @@ def getAndProcessBitbucketRepos(projectKey, pushToOrg, bitbucketAccessToken, git
             start = projectRepos["nextPageStart"]
 
         # Preprocess repository data
-        for repo in projectRepos["values"][2:3]:
+        for repo in projectRepos["values"]:
             # Get all info on a repo
             repoName = repo["name"]
             repoInfo = {
@@ -175,7 +175,7 @@ def getAndProcessBitbucketRepos(projectKey, pushToOrg, bitbucketAccessToken, git
                 repoInfo["description"] = repoResponse["description"]
             # else:
             #     repoInfo["description"] = None
-            link = list(filter(isHTTP, repoResponse["links"]["clone"]))
+            link = list(filter(utils.isHTTP, repoResponse["links"]["clone"]))
             repoInfo["cloneLink"] = link[0]["href"]
 
 
@@ -188,7 +188,7 @@ def getAndProcessBitbucketRepos(projectKey, pushToOrg, bitbucketAccessToken, git
                 )
                 # Repository with a similar name already exists on GitHub
                 if(githubOrgRepoCheck.status_code!=404):
-                    logLight(Fore.RED, "Repo {}: Rejected - {} already exists on the ***REMOVED*** Organization".format(repoName, repoName))
+                    utils.logLight(color.Fore.RED, "Repo {}: Rejected - {} already exists on the ***REMOVED*** Organization".format(repoName, repoName))
                     repoInfo["alreadyExisting"] = True
                     alreadyExisting.append(repoInfo)
                     continue
@@ -201,7 +201,7 @@ def getAndProcessBitbucketRepos(projectKey, pushToOrg, bitbucketAccessToken, git
                 )
                 # Repository with a similar name already exists on GitHub
                 if(githubRepoCheck.status_code!=404):
-                    logLight(Fore.RED, "Repo {}: Rejected - {} already exists on GitHub Account".format(repoName, repoName))
+                    utils.logLight(color.Fore.RED, "Repo {}: Rejected - {} already exists on GitHub Account".format(repoName, repoName))
                     repoInfo["alreadyExisting"] = True
                     alreadyExisting.append(repoInfo)
                     continue
@@ -215,13 +215,13 @@ def getAndProcessBitbucketRepos(projectKey, pushToOrg, bitbucketAccessToken, git
             pullRequests = json.loads(pullRequests.text)
             # Active pull requests on Bitbucket
             if(pullRequests["size"] != 0):
-                logLight(Fore.RED, "Repo {}: Rejected - {} active PRs".format(repoName, pullRequests["size"]))
+                utils.logLight(color.Fore.RED, "Repo {}: Rejected - {} active PRs".format(repoName, pullRequests["size"]))
                 repoInfo["openPRs"] = pullRequests["size"]
                 openPRs.append(repoInfo)
                 continue
 
             # No PRs on Bitbucket and Repo doesn't already exist on GitHub
-            logLight(Fore.GREEN, "Repo {}: Accepted".format(repoName))
+            utils.logLight(color.Fore.GREEN, "Repo {}: Accepted".format(repoName))
             accepts.append(repoInfo)
     return accepts, openPRs, alreadyExisting
 
@@ -241,9 +241,9 @@ def migrateRepos(repositories, pushToOrg, bitbucketAccountID, bitbucketAccessTok
         # Remove any existing folder with same name
         if(os.path.isdir(bitbucketName)):
             try:
-                shutil.rmtree(bitbucketName, onerror=remove_readonly)
+                shutil.rmtree(bitbucketName, onerror=utils.remove_readonly)
             except:
-                logLight(Fore.BLUE, "Unable to delete pre-existing folder with same name: Retry after deleting it manually.")
+                utils.logLight(color.Fore.BLUE, "Unable to delete pre-existing folder with same name: Retry after deleting it manually.")
                 continue
         # Bare clone the repository
         bitbucketLinkDomain = bitbucketLink.split("//")[1]
@@ -252,11 +252,11 @@ def migrateRepos(repositories, pushToOrg, bitbucketAccountID, bitbucketAccessTok
 
         # API call to make new remote repo on GitHub
         requestPayload = {
-            "name": remove_control_characters(bitbucketName),
+            "name": utils.remove_control_characters(bitbucketName),
             "private": True
         }
         if("description" in repo.keys()):
-            requestPayload["description"] = remove_control_characters(repo["description"])
+            requestPayload["description"] = utils.remove_control_characters(repo["description"])
         
         if(pushToOrg):
             # Create new repo of same name on GitHub ***REMOVED*** Org
@@ -282,18 +282,18 @@ def migrateRepos(repositories, pushToOrg, bitbucketAccountID, bitbucketAccessTok
         # Remove local clone of repo
         os.chdir("..")
         try:
-            shutil.rmtree("{}.git".format(bitbucketName), onerror=remove_readonly)
+            shutil.rmtree("{}.git".format(bitbucketName), onerror=utils.remove_readonly)
         except:
-            logLight(Fore.BLUE, "Unable to delete the locally cloned repo: Try doing it manually.")
+            utils.logLight(color.Fore.BLUE, "Unable to delete the locally cloned repo: Try doing it manually.")
             continue
 
     # Remove temporary folder
     if(not isDir):
         os.chdir("..")
         try:
-            shutil.rmtree("migration_temp", onerror=remove_readonly)
+            shutil.rmtree("migration_temp", onerror=utils.remove_readonly)
         except:
-            logLight(Fore.BLUE, "Unable to delete the migration_temp folder: Try doing it manually.")
+            utils.logLight(color.Fore.BLUE, "Unable to delete the migration_temp folder: Try doing it manually.")
     return True
 
 # Assign the selected repos to selected teams in the organization
@@ -301,7 +301,7 @@ def assignReposToTeams(repoAssignment, githubAccessToken):
     adminPermissions = { 'permission': 'admin' }
     assignResult = {}
     for team, repos in repoAssignment.items(): # key, value :: team, repos
-        logLight(Fore.YELLOW, "Assigning repos to {} team".format(team))
+        utils.logLight(color.Fore.YELLOW, "Assigning repos to {} team".format(team))
 
         # Get Team's ID
         teamInfo = requests.get(
@@ -323,16 +323,16 @@ def assignReposToTeams(repoAssignment, githubAccessToken):
             )
             if(assignResponse.status_code != 204):
                 failureCount += 1
-                logLight(Fore.RED, "Failed to assign {} repo to {} team: Error code {}".format(repo, team, assignResponse.status_code))
+                utils.logLight(color.Fore.RED, "Failed to assign {} repo to {} team: Error code {}".format(repo, team, assignResponse.status_code))
             else:
                 successCount += 1
-                logLight(Fore.GREEN, "Successfully assigned {} repo to {} team".format(repo, team))
+                utils.logLight(color.Fore.GREEN, "Successfully assigned {} repo to {} team".format(repo, team))
         assignResult[team] = {
             'success': successCount,
             'failure': failureCount
         }
-        logBright(Fore.BLUE, "\nAssigned repos to {} team:".format(team))
+        utils.logBright(color.Fore.BLUE, "\nAssigned repos to {} team:".format(team))
         print(
-            Style.BRIGHT + Fore.GREEN + "Success: {}\t".format(successCount) + Fore.RED + "Failure: {} (Check if repo exists on ***REMOVED*** org, try assigning manually)\n".format(failureCount) + Style.RESET_ALL
+            color.Style.BRIGHT + color.Fore.GREEN + "Success: {}\t".format(successCount) + color.Fore.RED + "Failure: {} (Check if repo exists on ***REMOVED*** org, try assigning manually)\n".format(failureCount) + color.Style.RESET_ALL
         )
     return assignResult
