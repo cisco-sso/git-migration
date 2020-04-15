@@ -6,7 +6,7 @@ import utils
 
 class credOps:
     def __init__(self):
-        self.bitbucketAPI, self.githubAPI = utils.APIUtils.getAPILinks()
+        self.bitbucketAPI, self.githubAPI = utils.ReadUtils.getAPILinks()
 
     # Read and return IDs and Access token from credentials.json
     def getCredentials(self):

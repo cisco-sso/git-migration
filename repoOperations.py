@@ -10,7 +10,7 @@ import utils
 
 class repoOps:
     def __init__(self):
-        self.bitbucketAPI, self.githubAPI = utils.APIUtils.getAPILinks()
+        self.bitbucketAPI, self.githubAPI = utils.ReadUtils.getAPILinks()
 
     # Returns list of all projects on BitBucket
     def getBitbucketProjects(self, bitbucketAccessToken):
@@ -59,6 +59,42 @@ class repoOps:
             # repoNames += [ { 'name':"{}".format(repo["name"]) } for repo in projectRepos["values"]]
             repoNames += [ "{}".format(repo["name"]) for repo in projectRepos["values"]]
         return repoNames
+
+    # Checks if the repositories exist on GitHub Enterprise and returns the ones that do
+    # Returns list of repos with their BitBucket and GitHub repo links
+    def existsOnGithub(self, projectKey, repoNames, bitbucketAccessToken, githubAccessToken):
+        reposOnGithub = []
+        # Check if same repository already exists on GitHub
+        for repoName in repoNames[:10]:
+            githubRepoCheckLink = self.githubAPI+"/repos/{}/{}".format("***REMOVED***", repoName)
+            githubRepoCheck = requests.get(
+                githubRepoCheckLink,
+                headers={"Authorization": "Bearer {}".format(githubAccessToken)}
+            )
+            # Repository with a similar name already exists on GitHub
+            if(githubRepoCheck.status_code!=404):
+                utils.LogUtils.logLight(color.Fore.GREEN, "Repo {} - Exists on GitHub".format(repoName))
+                
+                # Add GitHub clone link
+                repoDetails = json.loads(githubRepoCheck.text)
+                repoInfo = {
+                    "name": repoName,
+                    "githubLink": repoDetails['clone_url']
+                }
+
+                # Get and add BitBucket clone link
+                bitbucketRepoResponse = requests.get(
+                    self.bitbucketAPI+"/projects/{}/repos/{}".format(projectKey, repoName),
+                    headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)}
+                )
+                bitbucketRepoResponse = json.loads(bitbucketRepoResponse.text)
+                link = list(filter(utils.MiscUtils.isHTTP, bitbucketRepoResponse["links"]["clone"]))
+                repoInfo["bitbucketLink"] = link[0]["href"]
+
+                reposOnGithub.append(repoInfo)
+            else:
+                utils.LogUtils.logLight(color.Fore.RED, "Repo {} -  Not on GitHub".format(repoName))
+        return reposOnGithub
 
     # Check metadata of given repositories and reject repos with open PRs and ones that already exist on mentioned destination
     # Returns list of accepted and rejected repos
@@ -204,6 +240,36 @@ class repoOps:
             except:
                 utils.LogUtils.logLight(color.Fore.BLUE, "Unable to delete the migration_temp folder: Try doing it manually.")
         return True
+
+    # Syncs the BitBucket repository with the GitHub repository with just the deltas
+    def syncDelta(self, repositories, bitbucketAccountID, bitbucketAccessToken, githubAccountID, githubAccessToken):
+        # Make a temporary folder in CWD to clone repos from BitBucket
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        isDir = os.path.isdir("syncDirectory")
+        if(not isDir):
+            os.mkdir("syncDirectory")
+        os.chdir("syncDirectory")
+
+        for repo in repositories:
+            repoName = repo['name']
+            githubLink = repo['githubLink']
+            bitbucketLink = repo['bitbucketLink']
+
+            # Clone the repository from BitBucket
+            if(not os.path.isdir(repoName)):
+                bitbucketLinkDomain = bitbucketLink.split("//")[1]
+                os.system("git clone https://{}:{}@{}".format(bitbucketAccountID, bitbucketAccessToken, bitbucketLinkDomain))
+            os.chdir(repoName)
+            # Make local tracking branches for all remote branches on origin (bitbucket)
+            os.system("for remote in `git branch -r`; do git branch --track ${remote#origin/} $remote; done")
+            os.system("git pull --all")
+            # Change origin to point to GitHub
+            os.system("git remote set-url origin {}".format(githubLink))
+            # First push all the tags including new ones that might be created
+            os.system("git push --tags")
+            # Push all branches including new ones that might be created
+            os.system("git push --all")
+            utils.LogUtils.logLight(color.Fore.GREEN, "{} synced".format(repoName))
 
     # Get list of all teams from GHE ***REMOVED*** org
     def getTeamsInfo(self, githubAccessToken):

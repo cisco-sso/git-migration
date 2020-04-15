@@ -1,6 +1,7 @@
 # Added manually
 .vscode/
 .Pipfile.lock
+syncDirectory/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
