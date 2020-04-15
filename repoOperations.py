@@ -124,7 +124,7 @@ class repoOps:
             pullRequests = json.loads(pullRequests.text)
             # Active pull requests on Bitbucket
             if(pullRequests["size"] != 0):
-                utils.LogUtils.logLight(color.Fore.RED, "Repo {}: Rejected - {} active PRs".format(repoName, pullRequests["size"]))
+                utils.LogUtils.logLight(color.Fore.GREEN, "Repo {}: Accepted - {} active PRs".format(repoName, pullRequests["size"]))
                 repoInfo["openPRs"] = pullRequests["size"]
                 openPRs.append(repoInfo)
                 continue
