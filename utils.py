@@ -5,7 +5,8 @@ import os
 import stat
 import colorama as color
 
-class APIUtils():
+
+class ReadUtils():
     # Read and return API base URLs from apis.json
     @staticmethod
     def getAPILinks():
@@ -15,6 +16,15 @@ class APIUtils():
         bitbucketAPI = apis['DEFAULT']['BitBucket_API_BaseURL']
         githubAPI = apis['DEFAULT']['GitHub_API_BaseURL']
         return bitbucketAPI, githubAPI
+
+    # Read and return projects to sync and repos to exculde from sync
+    @staticmethod
+    def getSyncProjects():
+        with open("./bitbucketProjects.json") as file:
+            projects = json.load(file)
+        toSync = projects['sync']
+        toExclude = projects['exclude']
+        return toSync, toExclude
 
 class MiscUtils():
     # Filter function to get http links to clone repo
