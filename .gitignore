@@ -1,6 +1,5 @@
 # Added manually
 .vscode/
-.Pipfile.lock
 syncDirectory/
 
 # Byte-compiled / optimized / DLL files
@@ -128,5 +127,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-*.lock
 test.py
