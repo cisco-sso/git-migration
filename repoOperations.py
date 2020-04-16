@@ -274,6 +274,8 @@ class repoOps:
                 os.system("git clone https://{}:{}@{}".format(bitbucketAccountID, bitbucketAccessToken, bitbucketLinkDomain))
             os.chdir(repoName)
             # Make local tracking branches for all remote branches on origin (bitbucket)
+            self.log.debug("Setting origin for {} to bitbucket".format(repoName), repoName=repoName, bitbucketLink=bitbucketLink)
+            os.system("git remote set-url origin {}".format(bitbucketLink))
             self.log.debug("Setting up new tracking branches and pulling {}".format(repoName), repoName=repoName)
             os.system("for remote in `git branch -r`; do git branch --track ${remote#origin/} $remote; done")
             os.system("git pull --all")
