@@ -1,5 +1,6 @@
 import json
 import requests
+import os
 import colorama as color
 
 import utils
@@ -7,6 +8,7 @@ import utils
 class credOps:
     def __init__(self):
         self.bitbucketAPI, self.githubAPI = utils.ReadUtils.getAPILinks()
+        self.log = utils.LogUtils.getLogger(os.path.basename(__file__))
 
     # Read and return IDs and Access token from credentials.json
     def getCredentials(self):
@@ -20,9 +22,9 @@ class credOps:
         return bitbucketAccountID, bitbucketAccessToken, githubAccountID, githubAccessToken
 
     # Check if BitBucket and GitHub tokens are valid
-    def checkCredentials(self, project_ID, bitbucketAccessToken, githubAccessToken):
+    def checkCredentials(self, projectKey, bitbucketAccessToken, githubAccessToken):
         # Check BitBucket Access Token
-        bitbucketAccessCheckLink = self.bitbucketAPI+"/projects/{}/repos".format(project_ID)
+        bitbucketAccessCheckLink = self.bitbucketAPI+"/projects/{}/repos".format(projectKey)
         bitbucketAccessCheck = requests.get(
             bitbucketAccessCheckLink,
             headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)}
@@ -36,44 +38,44 @@ class credOps:
         )
 
         if(githubAccessTokenCheck.status_code!=200 or bitbucketAccessCheck.status_code!=200):
-            utils.LogUtils.logBright(color.Fore.RED, "Something went wrong!")
+            self.log.warning("Credentials Incorrect")
             # Check which access token failed
             if(githubAccessTokenCheck.status_code==401 and bitbucketAccessCheck.status_code==401):
-                utils.LogUtils.logBright(color.Fore.RED, "GitHub and BitBucket Access Tokens Failed: Unauthorized\nPlease check access tokens.")
+                self.log.error("GitHub and BitBucket Access Tokens Failed: Unauthorized", githubAccessToken=githubAccessToken, bitbucketAccessToken=bitbucketAccessToken, projectKey=projectKey)
             elif(bitbucketAccessCheck.status_code==404):
-                utils.LogUtils.logBright(color.Fore.RED, "Bitbucket Project not found: Please check the project ID.")
+                self.log.error("Bitbucket Project not found: Please check the project key.", projectKey=projectKey)
             elif(bitbucketAccessCheck.status_code==401):
-                utils.LogUtils.logBright(color.Fore.RED, "BitBucket Access Token Failed: Unauthorized\nPlease check access token.")
+                self.log.error("BitBucket Access Token Failed: Unauthorized", bitbucketAccessToken=bitbucketAccessToken)
             elif(githubAccessTokenCheck.status_code==401):
-                utils.LogUtils.logBright(color.Fore.RED, "GitHub Access Token Failed: Unauthorized\nPlease check access token.")
+                self.log.error("GitHub Access Token Failed: Unauthorized", githubAccessToken=githubAccessToken)
             else:
-                utils.LogUtils.logBright(color.Fore.RED, "BitBucket Status: {}".format(bitbucketAccessCheck.status_code))
-                utils.LogUtils.logBright(color.Fore.RED, "GitHub Status: {}".format(githubAccessTokenCheck.status_code))
+                self.log.error("BitBucket Status: {}".format(bitbucketAccessCheck.status_code), errorCode=bitbucketAccessCheck.status_code)
+                self.log.error("GitHub Status: {}".format(githubAccessTokenCheck.status_code), errorCode=githubAccessTokenCheck.status_code)
             return False
         else:
-            utils.LogUtils.logBright(color.Fore.GREEN, "Access Tokens working!")
+            self.log.info("Access Tokens working!")
             return True
 
     # Check if GitHub credentials allow to push to given destination
     def checkCredsForPush(self, pushToOrg, githubAccountID, githubAccessToken):
         if (pushToOrg):
-            utils.LogUtils.logBright(color.Fore.YELLOW, 'Push destination: CX Engineering organization')
+            self.log.info("Checking credentials for push : CX Engineering organization", pushDestination="***REMOVED***")
             isMember = requests.get(
                 self.githubAPI+"/orgs/***REMOVED***/members/{}".format(githubAccountID),
                 headers={"Authorization": "Bearer {}".format(githubAccessToken)}
             )
             # API returns 401 if the user's access token is incorrect
             if (isMember.status_code == 401):
-                utils.LogUtils.logBright(color.Fore.RED, "While checking your organization membership...\nGitHub Access Token Failed: Unauthorized\nPlease check access token.")
+                self.log.error("GitHub Access Token Failed: Unauthorized", githubAccountID=githubAccountID, githubAccessToken=githubAccessToken)
                 return False
             # API returns 204 if the person checking the membership is a member of the org
             if (not isMember.status_code == 204):
-                utils.LogUtils.logBright(color.Fore.RED, "\nYou appear to not be a member of the ***REMOVED*** Organization\nCheck the GitHub Account ID in credentials.json\nOr try again after being added as a member.")
+                self.log.error("Not a member of ***REMOVED*** Organization", githubAccountID=githubAccountID)
                 return False
-            utils.LogUtils.logBright(color.Fore.GREEN, "Organization membership check PASSED!")
+            self.log.info("Organization membership check PASSED!", githubAccountID=githubAccountID)
             return True
         else:
-            utils.LogUtils.logBright(color.Fore.YELLOW, 'Push destination: Personal Account - {}'.format(githubAccountID))
+            self.log.info("Checking credentials for push : {}".format(githubAccountID), pushDestination=githubAccountID)
             # Check GitHub Access Token
             githubAccessTokenCheckLink = self.githubAPI+"/users/{}/repos".format(githubAccountID)
             githubAccessTokenCheck = requests.get(
@@ -81,7 +83,7 @@ class credOps:
                 headers={"Authorization": "Bearer {}".format(githubAccessToken)}
             )
             if (githubAccessTokenCheck.status_code == 401):
-                utils.LogUtils.logBright(color.Fore.RED, "While checking push access to personal account...\nGitHub Access Token Failed: Unauthorized\nPlease check access token.")
+                self.log.error("GitHub Access Token Failed: Unauthorized", githubAccountID=githubAccountID, githubAccessToken=githubAccessToken)
                 return False
-            utils.LogUtils.logBright(color.Fore.GREEN, "Push access check to personal account PASSED!")
+            self.log.info("Push access check to personal account PASSED!", githubAccountID=githubAccountID)
             return True

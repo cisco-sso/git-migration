@@ -13,6 +13,8 @@ import repoOperations
 credOps = credOperations.credOps()
 repoOps = repoOperations.repoOps()
 
+log = utils.LogUtils.getLogger(__file__)
+
 bitbucketAccountID, bitbucketAccessToken, githubAccountID, githubAccessToken = credOps.getCredentials()
 
 toSync, toExclude = utils.ReadUtils.getSyncProjects()
@@ -22,9 +24,8 @@ for projectKey in toSync:
     if (not credOps.checkCredentials(projectKey, bitbucketAccessToken, githubAccessToken)):
         exit(1)
     
-    utils.LogUtils.logLight(color.Fore.BLUE, "Getting list of projects...\n")
     repoNames = repoOps.getBitbucketRepos(projectKey, bitbucketAccessToken)
     reposOnGithub = repoOps.existsOnGithub(projectKey, repoNames, bitbucketAccessToken, githubAccessToken)
 
-    utils.LogUtils.logLight(color.Fore.BLUE, "Syncing {} project\n".format(projectKey))
+    log.info("Syncing {} project".format(projectKey), projectKey=projectKey)
     repoOps.syncDelta(reposOnGithub, bitbucketAccountID, bitbucketAccessToken, githubAccountID, githubAccessToken)

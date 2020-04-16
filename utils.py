@@ -1,10 +1,13 @@
 import json
 import requests
 import unicodedata
+import logging
+import datetime
+import pythonjsonlogger.jsonlogger as jsonlogger
 import os
 import stat
 import colorama as color
-
+import structlog
 
 class ReadUtils():
     # Read and return API base URLs from apis.json
@@ -48,6 +51,21 @@ class StringUtils():
     def remove_control_characters(s):
         return "".join(ch for ch in s if unicodedata.category(ch)[0]!="C")
 
+class CustomJsonFormatter(jsonlogger.JsonFormatter):
+    def add_fields(self, log_record, record, message_dict):
+        super(CustomJsonFormatter, self).add_fields(log_record, record, message_dict)
+        if not log_record.get('timestamp'):
+            now = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+            log_record['timestamp'] = now
+        if log_record.get('level'):
+            log_record['level'] = log_record['level'].upper()
+        else:
+            log_record['level'] = record.levelname
+        if log_record.get('func'):
+            log_record['function'] = log_record['func']
+        else:
+            log_record['function'] = record.funcName
+
 class LogUtils():
     # Give colored print statements
     @staticmethod
@@ -57,3 +75,48 @@ class LogUtils():
     @staticmethod
     def logLight(logColor, logString):
         print(logColor + logString + color.Style.RESET_ALL)
+
+    @staticmethod
+    def getLogger(loggerName):
+        structlog.configure(
+            processors=[
+                structlog.stdlib.filter_by_level,
+                #structlog.stdlib.add_logger_name,
+                structlog.stdlib.add_log_level,
+                structlog.stdlib.PositionalArgumentsFormatter(),
+                structlog.processors.StackInfoRenderer(),
+                structlog.processors.format_exc_info,
+                structlog.processors.UnicodeDecoder(),
+                structlog.stdlib.render_to_log_kwargs,
+            ],
+            context_class=dict,
+            logger_factory=structlog.stdlib.LoggerFactory(),
+            wrapper_class=structlog.stdlib.BoundLogger,
+            cache_logger_on_first_use=True,
+        )
+
+        logFormatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] - %(funcName)s: %(message)s")
+        jsonFormatter = CustomJsonFormatter('(timestamp) (level) (name) (message)')
+
+        if(not os.path.isdir("logs")):
+            os.mkdir("logs")
+        
+        fileHandler = logging.FileHandler("logs/migration.log")
+        fileHandler.setFormatter(logFormatter)
+        fileHandler.setLevel(logging.DEBUG)
+
+        jsonFileHandler = logging.FileHandler("logs/migration-json.log")
+        jsonFileHandler.setFormatter(jsonFormatter)
+        jsonFileHandler.setLevel(logging.DEBUG)
+
+        consoleHandler = logging.StreamHandler()
+        consoleHandler.setFormatter(logFormatter)
+        consoleHandler.setLevel(logging.INFO)
+        
+        logger = structlog.get_logger(loggerName)
+        logger.addHandler(fileHandler)
+        logger.addHandler(jsonFileHandler)
+        logger.addHandler(consoleHandler)
+
+        logger.setLevel(logging.DEBUG)
+        return logger
