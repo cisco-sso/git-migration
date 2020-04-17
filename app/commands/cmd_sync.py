@@ -1,5 +1,8 @@
+# Library imports
 import click
 import os
+
+# Custom imports
 from app import utils
 from app import repoOperations
 from app import credOperations
@@ -69,13 +72,18 @@ def auto(ctx, run_once):
         # Check credentials for given project
         if (not credOps.checkCredentials(projectKey, ctx.bitbucketAccessToken, ctx.githubAccessToken)):
             exit(1)
-        # regexList = toInclude[projectKey]
+        includeRegexList = toInclude[projectKey]
+        excludeRegexList = toExclude[projectKey]
         repoNames = repoOps.getBitbucketRepos(projectKey, ctx.bitbucketAccessToken)
-        # filter repoNames according to inclusion and exclusion regexList - TBD
+        # Filter repositories based on config file regex patterns
+        repoNames = utils.RegexUtils.filterRepos(repoNames, includeRegexList)
+        repoNames = utils.RegexUtils.filterRepos(repoNames, excludeRegexList, excludeMatches=True)
 
         # Eventually, even if repos don't exist on github, should migrate them over - TBD
         reposOnGithub = repoOps.existsOnGithub(projectKey, repoNames, ctx.bitbucketAccessToken, ctx.githubAccessToken)
 
+        # Put an exit(0) just before this for testing other functionality without syncing
+        # Sync the filtered repositories repositories
         repoOps.syncDelta(reposOnGithub, ctx.bitbucketAccountID, ctx.bitbucketAccessToken, ctx.githubAccountID,
                           ctx.githubAccessToken)
 

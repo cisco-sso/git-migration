@@ -3,8 +3,8 @@ import sys
 import click
 import logging
 
-FORMAT = '%(asctime)s %(levelname)s:%(filename)s:%(lineno)d %(message)s'
-logging.basicConfig(format=FORMAT, level=logging.INFO)
+# FORMAT = '%(asctime)s %(levelname)s:%(filename)s:%(lineno)d %(message)s'
+# logging.basicConfig(format=FORMAT, level=logging.INFO)
 log = logging.getLogger(__name__)
 
 CONTEXT_SETTINGS = dict(auto_envvar_prefix='COMPLEX', help_option_names=['-h', '--help'])
@@ -19,7 +19,7 @@ class Context(object):
         """Logs a message to stderr."""
         if args:
             msg %= args
-        click.echo(msg, file=sys.stderr)
+        # click.echo(msg, file=sys.stderr)
 
     def vlog(self, msg, *args):
         """Logs a message to stderr only if verbose is enabled."""
@@ -54,13 +54,13 @@ class AppCLI(click.MultiCommand):
 
 
 @click.command(cls=AppCLI, context_settings=CONTEXT_SETTINGS)
-@click.option('--home',
-              type=click.Path(exists=True, file_okay=False, resolve_path=True),
-              help='Changes the folder to operate on.')
+# @click.option('--home',
+#               type=click.Path(exists=True, file_okay=False, resolve_path=True),
+#               help='Changes the folder to operate on.')
 @click.option('-v', '--verbose', is_flag=True, help='Enables verbose modoo.')
 @pass_context
-def app(ctx, verbose, home):
-    """The app command line interface."""
+def app(ctx, verbose):
+    """The Git-Migration CLI"""
     ctx.verbose = verbose
-    if home is not None:
-        ctx.home = home
+    # if home is not None:
+    #     ctx.home = home

@@ -4,6 +4,7 @@ import logging
 import datetime
 import pythonjsonlogger.jsonlogger as jsonlogger
 import os
+import re
 import stat
 import colorama as color
 import structlog
@@ -20,6 +21,22 @@ class ReadUtils():
         toInclude = syncConfig['include']
         toExclude = syncConfig['exclude']
         return toInclude, toExclude
+
+
+class RegexUtils():
+    @staticmethod
+    def filterRepos(repositories, regexList, excludeMatches=False):
+        if (not regexList):
+            return repositories
+        resultRepos = []
+        for pattern in regexList:
+            if (excludeMatches):
+                result = [repoName for repoName in repositories if not re.search(pattern, repoName)]
+            else:
+                result = [repoName for repoName in repositories if re.search(pattern, repoName)]
+            resultRepos += result
+        resultRepos = sorted(list(set(resultRepos)))
+        return resultRepos
 
 
 class MiscUtils():
