@@ -11,12 +11,14 @@ from app import cli as app_cli
 
 
 @click.group()
+# TODO (***REMOVED***): Add sane default that will work.
 @click.option('--bitbucket-url',
               prompt=len(os.environ.get('GIT_MIGRATION_BITBUCKET_API_URL', '')) == 0,
               default=lambda: os.environ.get('GIT_MIGRATION_BITBUCKET_API_URL', ''),
               show_default='env GIT_MIGRATION_BITBUCKET_API_URL',
               type=str,
               help="Bitbucket Base API URL")
+# TODO (***REMOVED***): Add sane default that will work.
 @click.option('--github-url',
               prompt=len(os.environ.get('GIT_MIGRATION_GITHUB_API_URL', '')) == 0,
               default=lambda: os.environ.get('GIT_MIGRATION_GITHUB_API_URL', ''),

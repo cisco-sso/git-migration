@@ -1,6 +1,6 @@
 # Library imports
-import PyInquirer as inquirer
 import colorama as color
+import questionary
 
 # Custom imports
 from app import utils, credOperations, repoOperations
@@ -12,14 +12,9 @@ def startSession(bitbucketAccountID, bitbucketAccessToken, githubAccountID, gith
     repoOps = repoOperations.repoOps(bitbucketAPI, githubAPI)
 
     # Ask for migration destination
-    pushQuestion = [{
-        'type': 'list',
-        'name': 'pushDestination',
-        'message': "Migrate repositories to?",
-        'choices': ["GitHub CX Engineering Org", "Personal Github Account"]
-    }]
-    pushAnswer = inquirer.prompt(pushQuestion)
-    pushToOrg = pushAnswer["pushDestination"] == "GitHub CX Engineering Org"
+    pushAnswer = questionary.select("Migrate repositories to?",
+                                    choices=["GitHub CX Engineering Org", "Personal Github Account"]).ask()
+    pushToOrg = pushAnswer == "GitHub CX Engineering Org"
 
     # Check if credentials are right to push to the chosen destination
     pushCheckPassed = credOps.checkCredsForPush(pushToOrg, githubAccountID, githubAccessToken)
@@ -31,16 +26,10 @@ def startSession(bitbucketAccountID, bitbucketAccessToken, githubAccountID, gith
     projectNames = repoOps.getBitbucketProjects(bitbucketAccessToken)
 
     # Ask which project to migrate
-    projectQuestion = [{
-        'type': 'list',
-        'name': 'project',
-        'message': 'Which project to migrate? (Enter to select)',
-        'choices': projectNames
-    }]
-    projectAnswer = inquirer.prompt(projectQuestion)
+    projectAnswer = questionary.select('Which project to migrate? (Enter to select)', choices=projectNames).ask()
 
     # Check access to BitBucket project and check GitHub credentials
-    [projectName, projectKey] = projectAnswer["project"].split(":")
+    [projectName, projectKey] = projectAnswer.split(":")
     if (not credOps.checkCredentials(projectKey, bitbucketAccessToken, githubAccessToken)):
         exit(1)
 
@@ -50,16 +39,11 @@ def startSession(bitbucketAccountID, bitbucketAccessToken, githubAccountID, gith
     repoList = [{'name': "{}".format(repo)} for repo in repoNames]
 
     # Ask which repos to migrate
-    reposQuestion = [{
-        'type': 'checkbox',
-        'name': 'repos',
-        'message': "Which repos to migrate from {}:{}?".format(projectName, projectKey),
-        'choices': repoList
-    }]
-    repoAnswers = inquirer.prompt(reposQuestion)
+    repoAnswers = questionary.checkbox("Which repos to migrate from {}:{}?".format(projectName, projectKey),
+                                       choices=repoList).ask()
 
     # Process repos to check for Open PRs or pre-existing repos on GitHub with same name
-    accepts, openPRs, alreadyExisting = repoOps.processBitbucketRepos(repoAnswers["repos"], projectKey, pushToOrg,
+    accepts, openPRs, alreadyExisting = repoOps.processBitbucketRepos(repoAnswers, projectKey, pushToOrg,
                                                                       bitbucketAccessToken, githubAccountID,
                                                                       githubAccessToken)
     acceptedNumber = len(accepts)
@@ -76,17 +60,8 @@ def startSession(bitbucketAccountID, bitbucketAccessToken, githubAccountID, gith
         utils.LogUtils.logBright(color.Fore.BLUE, "No repositories migrated")
         exit(0)
 
-    confirmMigrateQuestion = [{
-        'type':
-        'confirm',
-        'name':
-        'confirmMigrate',
-        'message':
-        'Migrate all accepted repositories? ( {} with open PRs on BitBucket )'.format(openPRsNumber),
-        'default':
-        True
-    }]
-    confirmMigrate = inquirer.prompt(confirmMigrateQuestion)['confirmMigrate']
+    confirmMigrate = questionary.confirm(
+        'Migrate all accepted repositories? ( {} with open PRs on BitBucket )'.format(openPRsNumber)).ask()
 
     if (not confirmMigrate):
         utils.LogUtils.logBright(color.Fore.BLUE, "No repositories migrated")
@@ -106,13 +81,8 @@ def startSession(bitbucketAccountID, bitbucketAccessToken, githubAccountID, gith
     if (not pushToOrg):
         exit(0)
 
-    confirmAssignToTeamQuestion = [{
-        'type': 'confirm',
-        'name': 'confirmAssignToTeam',
-        'message': 'Do you want to assign some of the migrated repos to different teams?',
-        'default': True
-    }]
-    confirmAssignToTeam = inquirer.prompt(confirmAssignToTeamQuestion)['confirmAssignToTeam']
+    confirmAssignToTeam = questionary.confirm(
+        'Do you want to assign some of the migrated repos to different teams?').ask()
 
     if (not confirmAssignToTeam):
         utils.LogUtils.logLight(color.Fore.BLUE,
@@ -122,26 +92,15 @@ def startSession(bitbucketAccountID, bitbucketAccessToken, githubAccountID, gith
     teamsInfoList = repoOps.getTeamsInfo(githubAccessToken)
     teamsChecklist = [{'name': team['slug']} for team in teamsInfoList]
 
-    selectTeamsQuestion = [{
-        'type': 'checkbox',
-        'name': 'selectTeams',
-        'message': 'Select the teams to which you want to assign the repos',
-        'choices': teamsChecklist
-    }]
-    selectedTeams = inquirer.prompt(selectTeamsQuestion)['selectTeams']
-
+    selectedTeams = questionary.checkbox('Select the teams to which you want to assign the repos',
+                                         choices=teamsChecklist)
     allMigratedRepos = [{'name': repo['name']} for repo in repositories]
 
     repoAssignment = {}
 
     for team in selectedTeams:
-        reposForTeamQuestion = [{
-            'type': 'checkbox',
-            'name': 'reposForTeams',
-            'message': 'Select the repos to assign to {} team'.format(team),
-            'choices': allMigratedRepos
-        }]
-        reposForTeams = inquirer.prompt(reposForTeamQuestion)['reposForTeams']
+        reposForTeams = questionary.checkbox('Select the repos to assign to {} team'.format(team),
+                                             choices=allMigratedRepos)
         if (len(reposForTeams) != 0):
             repoAssignment[team] = reposForTeams
         else:
