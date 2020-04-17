@@ -8,15 +8,20 @@ uninstall:  ## Uninstall this app
 	pipenv run pip uninstall -y git-migration
 
 format:  ## Auto-format and check pep8
-	yapf -i $$(find * -type f -name '*.py')
-	flake8 ./app ./tests
+	pipenv run yapf -i $$(find * -type f -name '*.py')
+	pipenv run flake8 ./app ./tests
 
 test:  ## Run tests
-	pytest
-	flake8 ./app ./tests
+	pipenv run pytest
+	pipenv run flake8 ./app ./tests
 
 dist: clean  ## Create a binary dist
 	(cd $(BASE) && $(PYTHON) setup.py sdist)
+
+.PHONY: tags
+tags:  ## Create tags for code navigation
+	rm -f TAGS
+	etags -a $$(find * -type f -name '*.py')
 
 clean:  ## Clean all temporary files
 clean:
