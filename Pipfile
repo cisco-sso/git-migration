@@ -4,12 +4,19 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-pylint = "*"
 
 [packages]
-argparse = "*"
+pip = "*"
+flake8 = "*"
+pep8 = "*"
+yapf = "*"
+sh = "*"
+click = "*"
 requests = "*"
-pyinquirer = "*"
-colorama = "*"
 python-json-logger = "*"
+colorama = "*"
 structlog = "*"
+pyinquirer = "*"
+
+[requires]
+python_version = "3.7"

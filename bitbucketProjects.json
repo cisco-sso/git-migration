@@ -1,6 +1,0 @@
-{
-  "sync": ["***REMOVED***", "***REMOVED***"],
-  "exclude": {
-    "***REMOVED***": ["repo-name-1", "repo-name-2"]
-  }
-}

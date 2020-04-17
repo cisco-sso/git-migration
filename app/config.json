@@ -1,0 +1,12 @@
+{
+  "syncConfig": {
+    "include": {
+      "***REMOVED***": ["*"],
+      "***REMOVED***": ["*"]
+    },
+    "exclude": {
+      "***REMOVED***": [],
+      "***REMOVED***": []
+    }
+  }
+}

@@ -1,6 +1,0 @@
-{
-  "DEFAULT": {
-    "BitBucket_API_BaseURL": "https://***REMOVED***/bitbucket/rest/api/1.0",
-    "GitHub_API_BaseURL": "https://***REMOVED***/api/v3"
-  }
-}
