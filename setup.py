@@ -28,14 +28,14 @@ class PostInstallCommand(install):
         install.run(self)
 
 
-# with open(base_dir / 'README.md', encoding='utf-8') as f:
-#     long_description = f.read()
+with open(base_dir / 'README.md', encoding='utf-8') as f:
+    long_description = f.read()
 
 setup(
     name='git-migration',
     include_package_data=True,
-    # use_scm_version=True,
-    long_description='\n' + "long_description",
+    use_scm_version=True,
+    long_description='\n' + long_description,
     packages=packages,
     setup_requires=['setuptools_scm'],
     cmdclass={
