@@ -1,7 +1,6 @@
 # Library imports
 import json
 import os
-import shutil
 import requests
 import colorama as color
 import pathlib
@@ -61,59 +60,29 @@ class repoOps:
             repoNames += ["{}".format(repo["name"]) for repo in projectRepos["values"]]
         return repoNames
 
-    # Checks if the repositories exist on GitHub Enterprise and returns the ones that do
-    # Returns list of repos with their BitBucket and GitHub repo links
-    def existsOnGithub(self, projectKey, repoNames, bitbucketAccessToken, githubAccessToken):
-        reposOnGithub = []
-        # Check if same repository already exists on GitHub
-        for repoName in repoNames[:10]:
-            githubRepoCheckLink = self.githubAPI + "/repos/{}/{}".format("***REMOVED***", repoName)
-            githubRepoCheck = requests.get(githubRepoCheckLink,
-                                           headers={"Authorization": "Bearer {}".format(githubAccessToken)})
-            # Repository with a similar name already exists on GitHub
-            if (githubRepoCheck.status_code != 404):
-                self.log.info("Repo {} - Exists on GitHub".format(repoName), repoName=repoName)
+    # Process the list of repositories for a project and return metadata and repository links
+    def processRepos(self, projectKey, repositories, pushToOrg, bitbucketAccessToken, githubAccountID,
+                     githubAccessToken):
+        processedRepos = []
+        newRepos = 0
+        self.log.info("Processing repos from project {}. pushToOrg = {}".format(projectKey, pushToOrg))
 
-                # Add GitHub clone link
-                repoDetails = json.loads(githubRepoCheck.text)
-                repoInfo = {"name": repoName, "githubLink": repoDetails['clone_url']}
-
-                # Get and add BitBucket clone link
-                bitbucketRepoResponse = requests.get(
-                    self.bitbucketAPI + "/projects/{}/repos/{}".format(projectKey, repoName),
-                    headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)})
-                bitbucketRepoResponse = json.loads(bitbucketRepoResponse.text)
-                link = list(filter(utils.MiscUtils.isHTTP, bitbucketRepoResponse["links"]["clone"]))
-                repoInfo["bitbucketLink"] = link[0]["href"]
-
-                reposOnGithub.append(repoInfo)
-            else:
-                self.log.warning("Repo {} -  Not on GitHub".format(repoName), repoName=repoName)
-        return reposOnGithub
-
-    # Check metadata of given repositories and reject repos that already exist on mentioned destination
-    # Returns list of accepted and rejected repos
-    def processBitbucketRepos(self, repositories, projectKey, pushToOrg, bitbucketAccessToken, githubAccountID,
-                              githubAccessToken):
-        # Repo metadata added to these lists
-        accepts = []
-        openPRs = []
-        alreadyExisting = []
-        # Preprocess repository data
         for repoName in repositories:
-            # Get all info on a repo
-            repoInfo = {"openPRs": None, "alreadyExisting": None}
-            repoInfo["name"] = repoName
-            repoResponse = requests.get(self.bitbucketAPI + "/projects/{}/repos/{}".format(projectKey, repoName),
-                                        headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)})
-            repoResponse = json.loads(repoResponse.text)
-            if ("description" in repoResponse.keys()):
-                repoInfo["description"] = repoResponse["description"]
-            # else:
-            #     repoInfo["description"] = None
-            link = list(filter(utils.MiscUtils.isHTTP, repoResponse["links"]["clone"]))
-            repoInfo["cloneLink"] = link[0]["href"]
+            # Add name
+            repoInfo = {"name": repoName}
+            bitbucketRepoResponse = requests.get(self.bitbucketAPI +
+                                                 "/projects/{}/repos/{}".format(projectKey, repoName),
+                                                 headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)})
+            bitbucketRepoResponse = json.loads(bitbucketRepoResponse.text)
+            # Add description
+            if ("description" in bitbucketRepoResponse):
+                repoInfo["description"] = bitbucketRepoResponse["description"]
+            # Add BitBucket Link
+            link = list(filter(utils.MiscUtils.isHTTP, bitbucketRepoResponse["links"]["clone"]))
+            repoInfo["bitbucketLink"] = link[0]["href"]
+            self.log.debug("Added {} repository details from BitBucket".format(repoName))
 
+            # Add GitHub Link
             if (pushToOrg):
                 # Check if same repository already exists on GitHub ***REMOVED*** Org
                 githubOrgRepoCheckLink = self.githubAPI + "/repos/***REMOVED***/{}".format(repoName)
@@ -121,10 +90,12 @@ class repoOps:
                                                   headers={"Authorization": "Bearer {}".format(githubAccessToken)})
                 # Repository with a similar name already exists on GitHub
                 if (githubOrgRepoCheck.status_code != 404):
-                    self.log.warning("Repo {} - Already exists on ***REMOVED*** org".format(repoName), repoName=repoName)
-                    repoInfo["alreadyExisting"] = True
-                    alreadyExisting.append(repoInfo)
-                    continue
+                    githubOrgRepoCheck = json.loads(githubOrgRepoCheck.text)
+                    self.log.info("Repo {} - Exists on ***REMOVED*** org".format(repoName), repoName=repoName)
+                    repoInfo["githubLink"] = githubOrgRepoCheck["clone_url"]
+                else:
+                    newRepos += 1
+                    self.log.info("Repo {} - Doesn't exist on ***REMOVED*** org".format(repoName), repoName=repoName)
             else:
                 # Check if same repository already exists on GitHub
                 githubRepoCheckLink = self.githubAPI + "/repos/{}/{}".format(githubAccountID, repoName)
@@ -132,111 +103,53 @@ class repoOps:
                                                headers={"Authorization": "Bearer {}".format(githubAccessToken)})
                 # Repository with a similar name already exists on GitHub
                 if (githubRepoCheck.status_code != 404):
-                    self.log.warning("Repo {} - Already exists on GHE account {}".format(repoName, githubAccountID),
-                                     repoName=repoName,
-                                     githubAccountID=githubAccountID)
-                    repoInfo["alreadyExisting"] = True
-                    alreadyExisting.append(repoInfo)
-                    continue
+                    githubRepoCheck = json.loads(githubRepoCheck.text)
+                    self.log.info("Repo {} - Exists on GHE account {}".format(repoName, githubAccountID),
+                                  repoName=repoName,
+                                  githubAccountID=githubAccountID)
+                    repoInfo["githubLink"] = githubRepoCheck["clone_url"]
+                else:
+                    newRepos += 1
+                    self.log.info("Repo {} - Doesn't exist on GHE account".format(repoName), repoName=repoName)
+            processedRepos.append(repoInfo)
+        totalRepos = len(processedRepos)
+        self.log.info("Syncing {} repositories, {} will be newly migrated to GitHub",
+                      totalRepos=totalRepos,
+                      newRepos=newRepos)
+        return processedRepos, totalRepos, newRepos
 
-            # Check if repository has open PRs on BitBucket
-            repoPRLink = self.bitbucketAPI + "/projects/{}/repos/{}/pull-requests/".format(projectKey, repoName)
-            pullRequests = requests.get(repoPRLink, headers={"Authorization": "Bearer {}".format(bitbucketAccessToken)})
-            pullRequests = json.loads(pullRequests.text)
-            # Active pull requests on Bitbucket
-            if (pullRequests["size"] != 0):
-                self.log.info("Repo {} - Accepted".format(repoName),
-                              repoName=repoName,
-                              pullRequests=pullRequests["size"])
-                repoInfo["openPRs"] = pullRequests["size"]
-                openPRs.append(repoInfo)
-                continue
+    # Makes a new repo through API calls on either ***REMOVED*** org or GHE personal account and returns repo link
+    def makeNewRepo(self, pushToOrg, repo, githubAccountID, githubAccessToken):
+        # API call to make new remote repo on GitHub
+        repoName = repo["name"]
 
-            # No PRs on Bitbucket and Repo doesn't already exist on GitHub
-            self.log.info("Repo {} - Accepted".format(repoName))
-            accepts.append(repoInfo)
-        return accepts, openPRs, alreadyExisting
+        requestPayload = {"name": utils.StringUtils.remove_control_characters(repoName), "private": True}
+        if ("description" in repo):
+            requestPayload["description"] = utils.StringUtils.remove_control_characters(repo["description"])
 
-    # Migrate all given repos to given destination
-    def migrateRepos(self, repositories, pushToOrg, bitbucketAccountID, bitbucketAccessToken, githubAccountID,
-                     githubAccessToken):
-        # Make a folder to clone repos from BitBucket
-        curDirPath = pathlib.Path(__file__).parent
-        os.chdir(str(curDirPath.parent))
-        isDir = os.path.isdir("migration_temp")
-        if (not isDir):
-            self.log.debug("Created directory migration_temp")
-            os.mkdir("migration_temp")
-        os.chdir("migration_temp")
+        if (pushToOrg):
+            # Create new repo of same name on GitHub ***REMOVED*** Org
+            gitResponse = requests.post(self.githubAPI + "/orgs/***REMOVED***/repos",
+                                        data=json.dumps(requestPayload),
+                                        headers={"Authorization": "Bearer {}".format(githubAccessToken)})
+            self.log.debug("New repo {} created on GitHub ***REMOVED***".format(repoName), repoName=repoName)
+        else:
+            # Create new repo of same name on GitHub Account
+            gitResponse = requests.post(self.githubAPI + "/user/repos",
+                                        data=json.dumps(requestPayload),
+                                        headers={"Authorization": "Bearer {}".format(githubAccessToken)})
+            self.log.debug("New repo {} created on GitHub {} account".format(repoName, githubAccountID),
+                           repoName=repoName,
+                           githubAccountID=githubAccountID)
 
-        for repo in repositories:
-            bitbucketName = repo["name"]
-            bitbucketLink = repo["cloneLink"]
-            self.log.info("Migrating repo {}".format(bitbucketName))
-            # Remove any existing folder with same name
-            if (os.path.isdir(bitbucketName)):
-                try:
-                    shutil.rmtree(bitbucketName, onerror=utils.FileUtils.remove_readonly)
-                except Exception:
-                    self.log.warn("Deleting {} in migration_temp failed. Skipping repo.".format(bitbucketName),
-                                  repoName=bitbucketName)
-                    continue
-            # Bare clone the repository
-            self.log.debug("Bare cloning repo {}".format(bitbucketName), repoName=bitbucketName)
-            bitbucketLinkDomain = bitbucketLink.split("//")[1]
-            os.system("git clone --bare https://{}:{}@{}".format(bitbucketAccountID, bitbucketAccessToken,
-                                                                 bitbucketLinkDomain))
-            os.chdir("{}.git".format(bitbucketName))
+        githubRepoData = json.loads(gitResponse.text)
+        githubLink = githubRepoData["clone_url"]
+        return githubLink
 
-            # API call to make new remote repo on GitHub
-            requestPayload = {"name": utils.StringUtils.remove_control_characters(bitbucketName), "private": True}
-            if ("description" in repo.keys()):
-                requestPayload["description"] = utils.StringUtils.remove_control_characters(repo["description"])
-
-            if (pushToOrg):
-                # Create new repo of same name on GitHub ***REMOVED*** Org
-                gitResponse = requests.post(self.githubAPI + "/orgs/***REMOVED***/repos",
-                                            data=json.dumps(requestPayload),
-                                            headers={"Authorization": "Bearer {}".format(githubAccessToken)})
-                self.log.debug("New repo {} created on GitHub ***REMOVED***".format(bitbucketName), repoName=bitbucketName)
-            else:
-                # Create new repo of same name on GitHub Account
-                gitResponse = requests.post(self.githubAPI + "/user/repos",
-                                            data=json.dumps(requestPayload),
-                                            headers={"Authorization": "Bearer {}".format(githubAccessToken)})
-                self.log.debug("New repo {} created on GitHub {} account".format(bitbucketName, githubAccountID),
-                               repoName=bitbucketName,
-                               githubAccountID=githubAccountID)
-
-            # Mirror the codebase to remote GitHub URL
-            githubRepoData = json.loads(gitResponse.text)
-            githubCloneLink = githubRepoData["clone_url"]
-            githubCloneLinkDomain = githubCloneLink.split("//")[1]
-            self.log.debug("Mirroring repo {} on GitHub".format(bitbucketName))
-            os.system("git push --mirror https://{}:{}@{}".format(githubAccountID, githubAccessToken,
-                                                                  githubCloneLinkDomain))
-
-            # Remove local clone of repo
-            os.chdir("..")
-            try:
-                shutil.rmtree("{}.git".format(bitbucketName), onerror=utils.FileUtils.remove_readonly)
-                self.log.debug("Deleted {} bare clone".format(bitbucketName), repoName=bitbucketName)
-            except Exception:
-                self.log.warning("Deleting {} bare clone failed".format(bitbucketName), repoName=bitbucketName)
-                continue
-
-        # Remove temporary folder
-        if (not isDir):
-            os.chdir("..")
-            try:
-                shutil.rmtree("migration_temp", onerror=utils.FileUtils.remove_readonly)
-                self.log.debug("Deleted migration_temp directory")
-            except Exception:
-                self.log.warning("Deleting migration_temp directory failed")
-        return True
-
-    # Syncs the BitBucket repository with the GitHub repository with just the deltas
-    def syncDelta(self, repositories, bitbucketAccountID, bitbucketAccessToken, githubAccountID, githubAccessToken):
+    # Recieves list of repos with metadata, BitBucker and GitHub repo links
+    # Syncs the repos that already exist on GitHub, Migrates over repos that don't exist on GitHub
+    def syncRepos(self, pushToOrg, repositories, bitbucketAccountID, bitbucketAccessToken, githubAccountID,
+                  githubAccessToken):
         # Make a folder to clone repos from BitBucket
         curDirPath = pathlib.Path(__file__).parent
         os.chdir(str(curDirPath.parent))
@@ -248,7 +161,11 @@ class repoOps:
 
         for repo in repositories:
             repoName = repo['name']
-            githubLink = repo['githubLink']
+            if ('githubLink' in repo):
+                githubLink = repo['githubLink']
+            else:
+                repo['githubLink'] = self.makeNewRepo(pushToOrg, repo, githubAccountID, githubAccessToken)
+                githubLink = repo['githubLink']
             bitbucketLink = repo['bitbucketLink']
 
             self.log.info("Syncing repo {}".format(repoName), repoName=repoName)
@@ -271,12 +188,13 @@ class repoOps:
             self.log.debug("Setting origin for {} to github".format(repoName), repoName=repoName, githubLink=githubLink)
             os.system("git remote set-url origin {}".format(githubLink))
             # First push all the tags including new ones that might be created
+            githubLinkDomain = githubLink.split("//")[1]
             self.log.debug("Pushing all tags for {}".format(repoName), repoName=repoName)
-            os.system("git push --tags")
+            os.system("git push https://{}:{}@{} --tags".format(githubAccountID, githubAccessToken, githubLinkDomain))
             # Push all branches including new ones that might be created
             self.log.debug("Pushing all branches for {}".format(repoName), repoName=repoName)
-            os.system("git push --all")
-            self.log("{} synced".format(repoName), repoName=repoName)
+            os.system("git push https://{}:{}@{} --all".format(githubAccountID, githubAccessToken, githubLinkDomain))
+            self.log.info("{} synced".format(repoName), repoName=repoName)
             utils.LogUtils.logLight(color.Fore.GREEN, "{} synced".format(repoName))
 
     # Get list of all teams from GHE ***REMOVED*** org
@@ -321,7 +239,8 @@ class repoOps:
             self.log.info("Assigned {} repos to {} team".format(successCount, team),
                           teamName=team,
                           successCount=successCount)
-            self.log.warning("Failed to assign {} repos to {} team".format(failureCount, team),
-                             teamName=team,
-                             failureCount=failureCount)
+            if (failureCount != 0):
+                self.log.warning("Failed to assign {} repos to {} team".format(failureCount, team),
+                                 teamName=team,
+                                 failureCount=failureCount)
         return assignResult

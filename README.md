@@ -59,9 +59,6 @@ Depending on which shell you are using, paste the following into `.bash_profile`
 
 ```bash
 # environment variables for git-migration
-export GIT_MIGRATION_BITBUCKET_API_URL="https://***REMOVED***/bitbucket/rest/api/1.0"
-export GIT_MIGRATION_GITHUB_API_URL="https://***REMOVED***/api/v3"
-
 export GIT_MIGRATION_BITBUCKET_ACCOUNT_ID="CEC ID"
 export GIT_MIGRATION_BITBUCKET_ACCESS_TOKEN="Bitbucket Access Token"
 export GIT_MIGRATION_GITHUB_ACCOUNT_ID="CEC ID"

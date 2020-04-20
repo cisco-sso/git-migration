@@ -11,20 +11,16 @@ from app import cli as app_cli
 
 
 @click.group()
-# TODO (***REMOVED***): Add sane default that will work.
 @click.option('--bitbucket-url',
-              prompt=len(os.environ.get('GIT_MIGRATION_BITBUCKET_API_URL', '')) == 0,
-              default=lambda: os.environ.get('GIT_MIGRATION_BITBUCKET_API_URL', ''),
-              show_default='env GIT_MIGRATION_BITBUCKET_API_URL',
+              default='https://***REMOVED***/bitbucket/rest/api/1.0',
+              show_default='https://***REMOVED***/bitbucket/rest/api/1.0',
               type=str,
-              help="Bitbucket Base API URL")
-# TODO (***REMOVED***): Add sane default that will work.
+              help="Bitbucket API Base URL")
 @click.option('--github-url',
-              prompt=len(os.environ.get('GIT_MIGRATION_GITHUB_API_URL', '')) == 0,
-              default=lambda: os.environ.get('GIT_MIGRATION_GITHUB_API_URL', ''),
-              show_default='env GIT_MIGRATION_GITHUB_API_URL',
+              default='https://***REMOVED***/api/v3',
+              show_default='https://***REMOVED***/api/v3',
               type=str,
-              help="GitHub Base API URL")
+              help="GitHub API Base URL")
 @click.option('--bitbucket-account-id',
               prompt=len(os.environ.get('GIT_MIGRATION_BITBUCKET_ACCOUNT_ID', '')) == 0,
               default=lambda: os.environ.get('GIT_MIGRATION_BITBUCKET_ACCOUNT_ID', ''),
@@ -60,13 +56,14 @@ def cli(ctx, bitbucket_url, github_url, bitbucket_account_id, bitbucket_access_t
     ctx.githubAccountID = github_account_id
     ctx.githubAccessToken = github_access_token
 
-
 @cli.command()
 @click.option('--run-once', is_flag=True, help="Syncs the repositories once")
+@click.option('--personal-account', is_flag=True, help="Migrates/Syncs the repositories to personal GitHub account")
 @app_cli.pass_context
 # By default, run in a loop at time intervals - TBD
-def auto(ctx, run_once):
+def auto(ctx, run_once, personal_account):
     """Automatically sync all according to config file"""
+    pushToOrg = not personal_account
     credOps = credOperations.credOps(ctx.bitbucketAPI, ctx.githubAPI)
     repoOps = repoOperations.repoOps(ctx.bitbucketAPI, ctx.githubAPI)
     toInclude, toExclude = utils.ReadUtils.getSyncConfig()
@@ -81,13 +78,15 @@ def auto(ctx, run_once):
         repoNames = utils.RegexUtils.filterRepos(repoNames, includeRegexList)
         repoNames = utils.RegexUtils.filterRepos(repoNames, excludeRegexList, excludeMatches=True)
 
-        # Eventually, even if repos don't exist on github, should migrate them over - TBD
-        reposOnGithub = repoOps.existsOnGithub(projectKey, repoNames, ctx.bitbucketAccessToken, ctx.githubAccessToken)
+        # Process and obtain metadata, links and details about repos
+        processedRepos, totalRepos, newRepos = repoOps.processRepos(projectKey, repoNames, pushToOrg,
+                                                                    ctx.bitbucketAccessToken, ctx.githubAccountID,
+                                                                    ctx.githubAccessToken)
 
         # Put an exit(0) just before this for testing other functionality without syncing
         # Sync the filtered repositories repositories
-        repoOps.syncDelta(reposOnGithub, ctx.bitbucketAccountID, ctx.bitbucketAccessToken, ctx.githubAccountID,
-                          ctx.githubAccessToken)
+        repoOps.syncRepos(pushToOrg, processedRepos, ctx.bitbucketAccountID, ctx.bitbucketAccessToken,
+                          ctx.githubAccountID, ctx.githubAccessToken)
 
 
 @cli.command()
