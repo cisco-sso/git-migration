@@ -37,7 +37,6 @@ clean:
 
 reset: ## Remove all logs and folders with repo clones
 	rm -rf logs/
-	rm -rf migration_temp/
 	rm -rf syncDirectory/
 
 include scripts/help.mk  # Must be included last.
