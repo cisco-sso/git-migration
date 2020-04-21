@@ -15,7 +15,7 @@ class ReadUtils():
     # Read and return projects to sync and repos to exculde from sync
     @staticmethod
     def getSyncConfig():
-        curDirPath = str(pathlib.Path(__file__).parent)
+        curDirPath = os.getcwd()
         with open(curDirPath + "/config.json") as file:
             syncConfig = json.load(file)['syncConfig']
         toInclude = syncConfig['include']
@@ -25,7 +25,7 @@ class ReadUtils():
     # Read and return the target organization to sync repositories to
     @staticmethod
     def getTargetOrg():
-        curDirPath = str(pathlib.Path(__file__).parent)
+        curDirPath = os.getcwd()
         with open(curDirPath + "/config.json") as file:
             targetOrg = json.load(file)['targetOrg']
         return targetOrg
@@ -105,21 +105,21 @@ class LogUtils():
     
     @staticmethod
     def getConsoleLogLevel():
-        curDirPath = str(pathlib.Path(__file__).parent)
+        curDirPath = os.getcwd()
         with open(curDirPath + "/config.json") as file:
             consoleLogLevel = json.load(file)['consoleLogLevel']
         return consoleLogLevel
     
     @staticmethod
     def getConsoleLogNormal():
-        curDirPath = str(pathlib.Path(__file__).parent)
+        curDirPath = os.getcwd()
         with open(curDirPath + "/config.json") as file:
             consoleLogNormal = json.load(file)['consoleLogNormal']
         return consoleLogNormal
     
     @staticmethod
     def getFileLogLevel():
-        curDirPath = str(pathlib.Path(__file__).parent)
+        curDirPath = os.getcwd()
         with open(curDirPath + "/config.json") as file:
             fileLogLevel = json.load(file)['fileLogLevel']
         return fileLogLevel
@@ -162,8 +162,8 @@ class LogUtils():
         logFormatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] - %(funcName)s: %(message)s")
         jsonFormatter = CustomJsonFormatter('(timestamp) (level) (name) (message)')
 
-        curDirPath = str(pathlib.Path(__file__).parent)
-        if (not os.path.isdir(curDirPath + "/../logs")):
+        curDirPath = os.getcwd()
+        if (not os.path.isdir(curDirPath + "/logs")):
             os.mkdir("logs")
 
         fileHandler = logging.FileHandler("logs/migration.log")

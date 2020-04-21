@@ -154,8 +154,8 @@ class repoOps:
     def syncRepos(self, pushToOrg, repositories, bitbucketAccountID, bitbucketAccessToken, githubAccountID,
                   githubAccessToken):
         # Make a folder to clone repos from BitBucket
-        curDirPath = pathlib.Path(__file__).parent
-        os.chdir(str(curDirPath.parent))
+        curDirPath = os.getcwd()
+        os.chdir(curDirPath)
         isDir = os.path.isdir("syncDirectory")
         if (not isDir):
             self.log.debug("Created directory syncDirectory")
