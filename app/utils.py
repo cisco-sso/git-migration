@@ -76,16 +76,21 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
     def add_fields(self, log_record, record, message_dict):
         super(CustomJsonFormatter, self).add_fields(log_record, record, message_dict)
         if not log_record.get('timestamp'):
-            now = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+            now = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
             log_record['timestamp'] = now
-        if log_record.get('level'):
-            log_record['level'] = log_record['level'].upper()
-        else:
-            log_record['level'] = record.levelname
         if log_record.get('func'):
             log_record['function'] = log_record['func']
         else:
             log_record['function'] = record.funcName
+        log_record['level'] = record.levelname
+        keepKeys = ["timestamp", "level", "name", "message", "function"]
+        params = {}
+        paramKeys = [ key for key in log_record if (key not  in keepKeys)]
+        for key in paramKeys:
+            params[key] = log_record[key]
+            del log_record[key]
+        if (params):
+            log_record["params"] = params
 
 
 class LogUtils():
@@ -97,9 +102,46 @@ class LogUtils():
     @staticmethod
     def logLight(logColor, logString):
         print(logColor + logString + color.Style.RESET_ALL)
+    
+    @staticmethod
+    def getConsoleLogLevel():
+        curDirPath = str(pathlib.Path(__file__).parent)
+        with open(curDirPath + "/config.json") as file:
+            consoleLogLevel = json.load(file)['consoleLogLevel']
+        return consoleLogLevel
+    
+    @staticmethod
+    def getConsoleLogNormal():
+        curDirPath = str(pathlib.Path(__file__).parent)
+        with open(curDirPath + "/config.json") as file:
+            consoleLogNormal = json.load(file)['consoleLogNormal']
+        return consoleLogNormal
+    
+    @staticmethod
+    def getFileLogLevel():
+        curDirPath = str(pathlib.Path(__file__).parent)
+        with open(curDirPath + "/config.json") as file:
+            fileLogLevel = json.load(file)['fileLogLevel']
+        return fileLogLevel
 
     @staticmethod
-    def getLogger(loggerName):
+    def resolveLogLevel(logLevel):
+        logLevel.lower()
+        if (logLevel == 'debug'):
+            return logging.DEBUG
+        elif (logLevel == 'info'):
+            return logging.INFO
+        elif (logLevel == 'warning'):
+            return logging.WARNING
+        elif (logLevel == 'error'):
+            return logging.ERROR
+        elif (logLevel == 'critical'):
+            return logging.CRITICAL
+        else:
+            return logging.INFO
+
+    @staticmethod
+    def getLogger(loggerName, consoleLogLevel, consoleLogNormal, fileLogLevel):
         structlog.configure(
             processors=[
                 structlog.stdlib.filter_by_level,
@@ -126,15 +168,18 @@ class LogUtils():
 
         fileHandler = logging.FileHandler("logs/migration.log")
         fileHandler.setFormatter(logFormatter)
-        fileHandler.setLevel(logging.DEBUG)
+        fileHandler.setLevel(LogUtils.resolveLogLevel(fileLogLevel))
 
         jsonFileHandler = logging.FileHandler("logs/migration-json.log")
         jsonFileHandler.setFormatter(jsonFormatter)
-        jsonFileHandler.setLevel(logging.DEBUG)
+        jsonFileHandler.setLevel(LogUtils.resolveLogLevel(fileLogLevel))
 
         consoleHandler = logging.StreamHandler()
-        consoleHandler.setFormatter(logFormatter)
-        consoleHandler.setLevel(logging.INFO)
+        if (consoleLogNormal):
+            consoleHandler.setFormatter(logFormatter)
+        else:
+            consoleHandler.setFormatter(jsonFormatter)
+        consoleHandler.setLevel(LogUtils.resolveLogLevel(consoleLogLevel))
 
         logger = structlog.get_logger(loggerName)
         logger.addHandler(fileHandler)

@@ -10,10 +10,10 @@ from app import utils
 
 
 class repoOps:
-    def __init__(self, bitbucketAPI, githubAPI):
+    def __init__(self, bitbucketAPI, githubAPI, consoleLogLevel, consoleLogNormal, fileLogLevel):
         self.bitbucketAPI = bitbucketAPI
         self.githubAPI = githubAPI
-        self.log = utils.LogUtils.getLogger(os.path.basename(__file__))
+        self.log = utils.LogUtils.getLogger(os.path.basename(__file__), consoleLogLevel, consoleLogNormal, fileLogLevel)
         self.targetOrg = utils.ReadUtils.getTargetOrg()
 
     # Returns list of all projects on BitBucket
@@ -199,6 +199,7 @@ class repoOps:
             os.system("git push https://{}:{}@{} --all".format(githubAccountID, githubAccessToken, githubLinkDomain))
             self.log.info("{} synced".format(repoName), repoName=repoName)
             utils.LogUtils.logLight(color.Fore.GREEN, "{} synced".format(repoName))
+            os.chdir("..")
 
     # Get list of all teams from GHE target org
     def getTeamsInfo(self, githubAccessToken):

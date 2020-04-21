@@ -6,11 +6,11 @@ import os
 from app import utils, credOperations, repoOperations
 
 
-def startSession(bitbucketAccountID, bitbucketAccessToken, githubAccountID, githubAccessToken, bitbucketAPI, githubAPI):
+def startSession(bitbucketAccountID, bitbucketAccessToken, githubAccountID, githubAccessToken, bitbucketAPI, githubAPI, consoleLogLevel, consoleLogNormal, fileLogLevel):
     # Objects for operations related to credentials and repository actions
-    credOps = credOperations.credOps(bitbucketAPI, githubAPI)
-    repoOps = repoOperations.repoOps(bitbucketAPI, githubAPI)
-    log = utils.LogUtils.getLogger(os.path.basename(__file__))
+    credOps = credOperations.credOps(bitbucketAPI, githubAPI, consoleLogLevel, consoleLogNormal, fileLogLevel)
+    repoOps = repoOperations.repoOps(bitbucketAPI, githubAPI, consoleLogLevel, consoleLogNormal, fileLogLevel)
+    log = utils.LogUtils.getLogger(os.path.basename(__file__), consoleLogLevel, consoleLogNormal, fileLogLevel)
     targetOrg = utils.ReadUtils.getTargetOrg()
     # Ask for migration destination
     pushAnswer = questionary.select("Migrate repositories to?",

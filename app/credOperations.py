@@ -4,10 +4,10 @@ import os
 from app import utils
 
 class credOps:
-    def __init__(self, bitbucketAPI, githubAPI):
+    def __init__(self, bitbucketAPI, githubAPI, consoleLogLevel, consoleLogNormal, fileLogLevel):
         self.bitbucketAPI = bitbucketAPI
         self.githubAPI = githubAPI
-        self.log = utils.LogUtils.getLogger(os.path.basename(__file__))
+        self.log = utils.LogUtils.getLogger(os.path.basename(__file__), consoleLogLevel, consoleLogNormal, fileLogLevel)
         self.targetOrg = utils.ReadUtils.getTargetOrg()
 
     # Check if BitBucket access tokens are valid and can access the specified project

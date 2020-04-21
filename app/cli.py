@@ -2,6 +2,7 @@ import os
 import sys
 import click
 import logging
+from app import utils
 
 # FORMAT = '%(asctime)s %(levelname)s:%(filename)s:%(lineno)d %(message)s'
 # logging.basicConfig(format=FORMAT, level=logging.INFO)
@@ -57,10 +58,18 @@ class AppCLI(click.MultiCommand):
 # @click.option('--home',
 #               type=click.Path(exists=True, file_okay=False, resolve_path=True),
 #               help='Changes the folder to operate on.')
-@click.option('-v', '--verbose', is_flag=True, help='Enables verbose modoo.')
+@click.option('-v', '--verbose', is_flag=True, help='Enables verbose mode.')
+@click.option('--console-log-level', type=click.Choice(['debug', 'info', 'warning', 'error', 'critical'], case_sensitive=False), default=utils.LogUtils.getConsoleLogLevel(), help="Filter logs to show on STDOUT")
+@click.option('--console-log-normal', is_flag=True, default=utils.LogUtils.getConsoleLogNormal(), help="Print normal logs to STDOUT instead of JSON")
+@click.option('--file-log-level', type=click.Choice(['debug', 'info', 'warning', 'error', 'critical'], case_sensitive=False), default=utils.LogUtils.getFileLogLevel(), help="Filter logs to print to file")
 @pass_context
-def app(ctx, verbose):
+def app(ctx, verbose, console_log_level, console_log_normal, file_log_level):
     """The Git-Migration CLI"""
     ctx.verbose = verbose
+    ctx.console_log_level = console_log_level
+    ctx.console_log_normal = console_log_normal
+    ctx.file_log_level = file_log_level
+    print("Console log normal", console_log_normal)
+    ctx.log = utils.LogUtils.getLogger(os.path.basename(__file__), console_log_level, console_log_normal, file_log_level)
     # if home is not None:
     #     ctx.home = home
