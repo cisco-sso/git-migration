@@ -66,7 +66,7 @@ class repoOps:
                      githubAccessToken):
         processedRepos = []
         newRepos = 0
-        self.log.info("Processing repos from project {}".format(projectKey))
+        self.log.info("Processing repos from project {}".format(projectKey), projectKey=projectKey)
 
         for repoName in repositories:
             # Add name
@@ -81,7 +81,7 @@ class repoOps:
             # Add BitBucket Link
             link = list(filter(utils.MiscUtils.isHTTP, bitbucketRepoResponse["links"]["clone"]))
             repoInfo["bitbucketLink"] = link[0]["href"]
-            self.log.debug("Added {} repository details from BitBucket".format(repoName))
+            self.log.debug("Added {} repository details from BitBucket".format(repoName), repoName=repoName)
 
             # Add GitHub Link
             if (pushToOrg):
@@ -94,11 +94,11 @@ class repoOps:
                 # Repository with a similar name already exists on GitHub
                 if (githubOrgRepoCheck.status_code != 404):
                     githubOrgRepoCheck = json.loads(githubOrgRepoCheck.text)
-                    self.log.info("Repo {} - Exists on {} org".format(repoName, self.targetOrg), repoName=repoName)
+                    self.log.debug("Repo {} - Exists on {} org".format(repoName, self.targetOrg), repoName=repoName, targetOrg=self.targetOrg)
                     repoInfo["githubLink"] = githubOrgRepoCheck["clone_url"]
                 else:
                     newRepos += 1
-                    self.log.info("Repo {} - Doesn't exist on {} org".format(repoName, self.targetOrg), repoName=repoName)
+                    self.log.debug("Repo {} - Doesn't exist on {} org".format(repoName, self.targetOrg), repoName=repoName, targetOrg=self.targetOrg)
             else:
                 # Check if same repository already exists on GitHub
                 githubRepoCheckLink = self.githubAPI + "/repos/{}/{}".format(githubAccountID, repoName)
@@ -107,13 +107,13 @@ class repoOps:
                 # Repository with a similar name already exists on GitHub
                 if (githubRepoCheck.status_code != 404):
                     githubRepoCheck = json.loads(githubRepoCheck.text)
-                    self.log.info("Repo {} - Exists on GHE account {}".format(repoName, githubAccountID),
+                    self.log.debug("Repo {} - Exists on GHE account {}".format(repoName, githubAccountID),
                                   repoName=repoName,
                                   githubAccountID=githubAccountID)
                     repoInfo["githubLink"] = githubRepoCheck["clone_url"]
                 else:
                     newRepos += 1
-                    self.log.info("Repo {} - Doesn't exist on GHE account".format(repoName), repoName=repoName)
+                    self.log.debug("Repo {} - Doesn't exist on GHE account".format(repoName), repoName=repoName, githubAccountID=githubAccountID)
             processedRepos.append(repoInfo)
         totalRepos = len(processedRepos)
         self.log.info("Syncing {} repositories, {} will be newly migrated to GitHub",
@@ -135,7 +135,7 @@ class repoOps:
             gitResponse = requests.post(self.githubAPI + "/orgs/{}/repos".format(self.targetOrg),
                                         data=json.dumps(requestPayload),
                                         headers={"Authorization": "Bearer {}".format(githubAccessToken)})
-            self.log.debug("New repo {} created on GitHub {}".format(repoName, self.targetOrg), repoName=repoName)
+            self.log.debug("New repo {} created on GitHub {}".format(repoName, self.targetOrg), repoName=repoName, targetOrg=self.targetOrg)
         else:
             # Create new repo of same name on GitHub Account
             gitResponse = requests.post(self.githubAPI + "/user/repos",
@@ -175,35 +175,35 @@ class repoOps:
             # Clone the repository from BitBucket
             if (not os.path.isdir(repoName)):
                 bitbucketLinkDomain = bitbucketLink.split("//")[1]
-                self.log.debug("Cloning repo {}".format(repoName), repoName=repoName)
+                self.log.info("Cloning repo {}".format(repoName), repoName=repoName)
                 os.system("git clone https://{}:{}@{}".format(bitbucketAccountID, bitbucketAccessToken,
                                                               bitbucketLinkDomain))
             os.chdir(repoName)
             # Make local tracking branches for all remote branches on origin (bitbucket)
-            self.log.debug("Setting origin for {} to bitbucket".format(repoName),
+            self.log.info("Setting origin for {} to bitbucket".format(repoName),
                            repoName=repoName,
                            bitbucketLink=bitbucketLink)
             os.system("git remote set-url origin {}".format(bitbucketLink))
-            self.log.debug("Setting up new tracking branches and pulling {}".format(repoName), repoName=repoName)
+            self.log.info("Setting up new tracking branches and pulling {}".format(repoName), repoName=repoName)
             os.system("for remote in `git branch -r`; do git branch --track ${remote#origin/} $remote; done")
             os.system("git pull --all")
             # Change origin to point to GitHub
-            self.log.debug("Setting origin for {} to github".format(repoName), repoName=repoName, githubLink=githubLink)
+            self.log.info("Setting origin for {} to github".format(repoName), repoName=repoName, githubLink=githubLink)
             os.system("git remote set-url origin {}".format(githubLink))
             # First push all the tags including new ones that might be created
             githubLinkDomain = githubLink.split("//")[1]
-            self.log.debug("Pushing all tags for {}".format(repoName), repoName=repoName)
+            self.log.info("Pushing all tags for {}".format(repoName), repoName=repoName)
             os.system("git push https://{}:{}@{} --tags".format(githubAccountID, githubAccessToken, githubLinkDomain))
             # Push all branches including new ones that might be created
-            self.log.debug("Pushing all branches for {}".format(repoName), repoName=repoName)
+            self.log.info("Pushing all branches for {}".format(repoName), repoName=repoName)
             os.system("git push https://{}:{}@{} --all".format(githubAccountID, githubAccessToken, githubLinkDomain))
-            self.log.info("{} synced".format(repoName), repoName=repoName)
+            self.log.debug("{} synced".format(repoName), repoName=repoName)
             utils.LogUtils.logLight(color.Fore.GREEN, "{} synced".format(repoName))
             os.chdir("..")
 
     # Get list of all teams from GHE target org
     def getTeamsInfo(self, githubAccessToken):
-        self.log.debug("Fetching teams list from GitHub")
+        self.log.info("Fetching teams list from GitHub")
         teamsInfoList = requests.get(self.githubAPI + "/orgs/{}/teams".format(self.targetOrg),
                                      headers={"Authorization": "Bearer {}".format(githubAccessToken)})
         teamsInfoList = json.loads(teamsInfoList.text)
@@ -217,7 +217,7 @@ class repoOps:
             self.log.info("Assigning repos to {} team".format(team), teamName=team)
 
             # Get Team's ID
-            self.log.debug("Fetching Team ID", teamName=team)
+            self.log.info("Fetching Team ID", teamName=team)
             teamInfo = requests.get(self.githubAPI + "/orgs/{}/teams/{}".format(self.targetOrg, team),
                                     headers={"Authorization": "Bearer {}".format(githubAccessToken)})
             teamInfo = json.loads(teamInfo.text)
@@ -232,15 +232,15 @@ class repoOps:
                                               headers={"Authorization": "Bearer {}".format(githubAccessToken)})
                 if (assignResponse.status_code != 204):
                     failureCount += 1
-                    self.log.warning("Failed to assign {} repo to {} team".format(repo, team),
+                    self.log.warning("Failed to assign {} repo to {} team. Code {}".format(repo, team, assignResponse.status_code),
                                      repoName=repo,
                                      teamName=team,
                                      errorCode=assignResponse.status_code)
                 else:
                     successCount += 1
-                    self.log.info("Assigned {} repo to {} team".format(repo, team), repoName=repo, teamName=team)
+                    self.log.debug("Assigned {} repo to {} team".format(repo, team), repoName=repo, teamName=team)
             assignResult[team] = {'success': successCount, 'failure': failureCount}
-            self.log.info("Assigned {} repos to {} team".format(successCount, team),
+            self.log.debug("Assigned {} repos to {} team".format(successCount, team),
                           teamName=team,
                           successCount=successCount)
             if (failureCount != 0):

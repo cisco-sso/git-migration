@@ -48,7 +48,7 @@ def startSession(bitbucketAccountID, bitbucketAccessToken, githubAccountID, gith
                                                                 bitbucketAccessToken, githubAccountID,
                                                                 githubAccessToken)
     if (totalRepos == 0):
-        log.info("NO REPOSITORIES SYNCED OR MIGRATED")
+        log.debug("NO REPOSITORIES SYNCED OR MIGRATED")
         exit(0)
     # Used later for team assignments
     migrationRepos = [{'name': repo['name']} for repo in processedRepos if ('githubLink' not in repo)]
@@ -57,13 +57,13 @@ def startSession(bitbucketAccountID, bitbucketAccessToken, githubAccountID, gith
     confirmMigrate = questionary.confirm('Proceed with syncing {} and migrating {} repos?'.format(
         totalRepos - newRepos, newRepos)).ask()
     if (not confirmMigrate):
-        log.info("NO REPOSITORIES SYNCED OR MIGRATED")
+        log.debug("NO REPOSITORIES SYNCED OR MIGRATED")
         exit(0)
 
     # Sync existing repos and migrate over the new repos
     repoOps.syncRepos(pushToOrg, processedRepos, bitbucketAccountID, bitbucketAccessToken, githubAccountID,
                       githubAccessToken)
-    log.info("Successful - {} repos synced and {} repositories migrated to GitHub".format(
+    log.debug("Successful - {} repos synced and {} repositories migrated to GitHub".format(
         totalRepos - newRepos, newRepos),
              totalRepos=totalRepos,
              newRepos=newRepos)
@@ -74,7 +74,7 @@ def startSession(bitbucketAccountID, bitbucketAccessToken, githubAccountID, gith
     confirmAssignToTeam = questionary.confirm(
         'Do you want to assign some of the migrated repos to different teams?').ask()
     if (not confirmAssignToTeam):
-        log.info("None of the {} migrated repositories assigned to any teams".format(newRepos), newRepos=newRepos)
+        log.debug("None of the {} migrated repositories assigned to any teams".format(newRepos), newRepos=newRepos)
         exit(0)
 
     # Fetch list of existing teams on github
@@ -98,7 +98,7 @@ def startSession(bitbucketAccountID, bitbucketAccessToken, githubAccountID, gith
         if (len(reposForTeams) != 0):
             repoAssignment[team] = reposForTeams
         else:
-            log.info("No repositories selected to assign to {} team".format(team), teamName=team)
+            log.debug("No repositories selected to assign to {} team".format(team), teamName=team)
 
     # Assign the repos to selected teams
     repoOps.assignReposToTeams(repoAssignment, githubAccessToken)
