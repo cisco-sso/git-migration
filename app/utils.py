@@ -8,49 +8,48 @@ import re
 import stat
 import colorama as color
 import structlog
-import pathlib
 
 
 class ReadUtils():
     # Read and return projects to sync and repos to exculde from sync
     @staticmethod
-    def getSyncConfig():
-        curDirPath = os.getcwd()
-        with open(curDirPath + "/config.json") as file:
-            syncConfig = json.load(file)['syncConfig']
-        toInclude = syncConfig['include']
-        toExclude = syncConfig['exclude']
-        return toInclude, toExclude
-    
+    def get_sync_config():
+        cur_dir_path = os.getcwd()
+        with open(cur_dir_path + "/config.json") as file:
+            sync_config = json.load(file)['sync_config']
+        to_include = sync_config['include']
+        to_exclude = sync_config['exclude']
+        return to_include, to_exclude
+
     # Read and return the target organization to sync repositories to
     @staticmethod
-    def getTargetOrg():
-        curDirPath = os.getcwd()
-        with open(curDirPath + "/config.json") as file:
-            targetOrg = json.load(file)['targetOrg']
-        return targetOrg
+    def get_target_org():
+        cur_dir_path = os.getcwd()
+        with open(cur_dir_path + "/config.json") as file:
+            target_org = json.load(file)['target_org']
+        return target_org
 
 
 class RegexUtils():
     @staticmethod
-    def filterRepos(repositories, regexList, excludeMatches=False):
-        if (not regexList):
+    def filter_repos(repositories, regex_list, exclude_matches=False):
+        if (not regex_list):
             return repositories
-        resultRepos = []
-        for pattern in regexList:
-            if (excludeMatches):
-                result = [repoName for repoName in repositories if not re.match(pattern, repoName)]
+        result_repos = []
+        for pattern in regex_list:
+            if (exclude_matches):
+                result = [repo_name for repo_name in repositories if not re.match(pattern, repo_name)]
             else:
-                result = [repoName for repoName in repositories if re.match(pattern, repoName)]
-            resultRepos += result
-        resultRepos = sorted(list(set(resultRepos)))
-        return resultRepos
+                result = [repo_name for repo_name in repositories if re.match(pattern, repo_name)]
+            result_repos += result
+        result_repos = sorted(list(set(result_repos)))
+        return result_repos
 
 
 class MiscUtils():
     # Filter function to get http links to clone repo
     @staticmethod
-    def isHTTP(link):
+    def is_http(link):
         if (link["name"] == "http" or link["name"] == "https"):
             return True
         else:
@@ -83,10 +82,10 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
         else:
             log_record['function'] = record.funcName
         log_record['level'] = record.levelname
-        keepKeys = ["timestamp", "level", "name", "message", "function"]
+        keep_keys = ["timestamp", "level", "name", "message", "function"]
         params = {}
-        paramKeys = [ key for key in log_record if (key not  in keepKeys)]
-        for key in paramKeys:
+        param_keys = [key for key in log_record if (key not in keep_keys)]
+        for key in param_keys:
             params[key] = log_record[key]
             del log_record[key]
         if (params):
@@ -96,52 +95,52 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
 class LogUtils():
     # Give colored print statements
     @staticmethod
-    def logBright(logColor, logString):
-        print(logColor + color.Style.BRIGHT + logString + color.Style.RESET_ALL)
+    def log_bright(log_color, log_string):
+        print(log_color + color.Style.BRIGHT + log_string + color.Style.RESET_ALL)
 
     @staticmethod
-    def logLight(logColor, logString):
-        print(logColor + logString + color.Style.RESET_ALL)
-    
-    @staticmethod
-    def getConsoleLogLevel():
-        curDirPath = os.getcwd()
-        with open(curDirPath + "/config.json") as file:
-            consoleLogLevel = json.load(file)['consoleLogLevel']
-        return consoleLogLevel
-    
-    @staticmethod
-    def getConsoleLogNormal():
-        curDirPath = os.getcwd()
-        with open(curDirPath + "/config.json") as file:
-            consoleLogNormal = json.load(file)['consoleLogNormal']
-        return consoleLogNormal
-    
-    @staticmethod
-    def getFileLogLevel():
-        curDirPath = os.getcwd()
-        with open(curDirPath + "/config.json") as file:
-            fileLogLevel = json.load(file)['fileLogLevel']
-        return fileLogLevel
+    def log_light(log_color, log_string):
+        print(log_color + log_string + color.Style.RESET_ALL)
 
     @staticmethod
-    def resolveLogLevel(logLevel):
-        logLevel.lower()
-        if (logLevel == 'debug'):
+    def get_console_log_level():
+        cur_dir_path = os.getcwd()
+        with open(cur_dir_path + "/config.json") as file:
+            console_log_level = json.load(file)['console_log_level']
+        return console_log_level
+
+    @staticmethod
+    def get_console_log_normal():
+        cur_dir_path = os.getcwd()
+        with open(cur_dir_path + "/config.json") as file:
+            console_log_normal = json.load(file)['console_log_normal']
+        return console_log_normal
+
+    @staticmethod
+    def get_file_log_level():
+        cur_dir_path = os.getcwd()
+        with open(cur_dir_path + "/config.json") as file:
+            file_log_level = json.load(file)['file_log_level']
+        return file_log_level
+
+    @staticmethod
+    def resolve_log_level(log_level):
+        log_level.lower()
+        if (log_level == 'debug'):
             return logging.DEBUG
-        elif (logLevel == 'info'):
+        elif (log_level == 'info'):
             return logging.INFO
-        elif (logLevel == 'warning'):
+        elif (log_level == 'warning'):
             return logging.WARNING
-        elif (logLevel == 'error'):
+        elif (log_level == 'error'):
             return logging.ERROR
-        elif (logLevel == 'critical'):
+        elif (log_level == 'critical'):
             return logging.CRITICAL
         else:
             return logging.INFO
 
     @staticmethod
-    def getLogger(loggerName, consoleLogLevel, consoleLogNormal, fileLogLevel):
+    def get_logger(logger_name, console_log_level, console_log_normal, file_log_level):
         structlog.configure(
             processors=[
                 structlog.stdlib.filter_by_level,
@@ -159,32 +158,32 @@ class LogUtils():
             cache_logger_on_first_use=True,
         )
 
-        logFormatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] - %(funcName)s: %(message)s")
-        jsonFormatter = CustomJsonFormatter('(timestamp) (level) (name) (message)')
+        log_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] - %(funcName)s: %(message)s")
+        json_formatter = CustomJsonFormatter('(timestamp) (level) (name) (message)')
 
-        curDirPath = os.getcwd()
-        if (not os.path.isdir(curDirPath + "/logs")):
+        cur_dir_path = os.getcwd()
+        if (not os.path.isdir(cur_dir_path + "/logs")):
             os.mkdir("logs")
 
-        fileHandler = logging.FileHandler("logs/migration.log")
-        fileHandler.setFormatter(logFormatter)
-        fileHandler.setLevel(LogUtils.resolveLogLevel(fileLogLevel))
+        file_handler = logging.FileHandler("logs/migration.log")
+        file_handler.setFormatter(log_formatter)
+        file_handler.setLevel(LogUtils.resolve_log_level(file_log_level))
 
-        jsonFileHandler = logging.FileHandler("logs/migration-json.log")
-        jsonFileHandler.setFormatter(jsonFormatter)
-        jsonFileHandler.setLevel(LogUtils.resolveLogLevel(fileLogLevel))
+        json_file_handler = logging.FileHandler("logs/migration-json.log")
+        json_file_handler.setFormatter(json_formatter)
+        json_file_handler.setLevel(LogUtils.resolve_log_level(file_log_level))
 
-        consoleHandler = logging.StreamHandler()
-        if (consoleLogNormal):
-            consoleHandler.setFormatter(logFormatter)
+        console_handler = logging.StreamHandler()
+        if (console_log_normal):
+            console_handler.setFormatter(log_formatter)
         else:
-            consoleHandler.setFormatter(jsonFormatter)
-        consoleHandler.setLevel(LogUtils.resolveLogLevel(consoleLogLevel))
+            console_handler.setFormatter(json_formatter)
+        console_handler.setLevel(LogUtils.resolve_log_level(console_log_level))
 
-        logger = structlog.get_logger(loggerName)
-        logger.addHandler(fileHandler)
-        logger.addHandler(jsonFileHandler)
-        logger.addHandler(consoleHandler)
+        logger = structlog.get_logger(logger_name)
+        logger.addHandler(file_handler)
+        logger.addHandler(json_file_handler)
+        logger.addHandler(console_handler)
 
         logger.setLevel(logging.DEBUG)
         return logger

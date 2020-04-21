@@ -1,9 +1,9 @@
 {
-  "targetOrg": "***REMOVED***",
-  "consoleLogLevel": "info",
-  "consoleLogNormal": false,
-  "fileLogLevel": "debug",
-  "syncConfig": {
+  "target_org": "***REMOVED***",
+  "console_log_level": "info",
+  "console_log_normal": false,
+  "file_log_level": "debug",
+  "sync_config": {
     "include": {
       "***REMOVED***": ["***REMOVED***-.*"]
     },
