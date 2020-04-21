@@ -21,6 +21,14 @@ class ReadUtils():
         toInclude = syncConfig['include']
         toExclude = syncConfig['exclude']
         return toInclude, toExclude
+    
+    # Read and return the target organization to sync repositories to
+    @staticmethod
+    def getTargetOrg():
+        curDirPath = str(pathlib.Path(__file__).parent)
+        with open(curDirPath + "/config.json") as file:
+            targetOrg = json.load(file)['targetOrg']
+        return targetOrg
 
 
 class RegexUtils():

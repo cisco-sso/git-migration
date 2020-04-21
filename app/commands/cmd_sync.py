@@ -66,10 +66,19 @@ def auto(ctx, run_once, personal_account):
     pushToOrg = not personal_account
     credOps = credOperations.credOps(ctx.bitbucketAPI, ctx.githubAPI)
     repoOps = repoOperations.repoOps(ctx.bitbucketAPI, ctx.githubAPI)
+    
+    # Check if credentials are right and can push to the chosen destination
+    githubPushCheck = credOps.checkGithubPushCreds(pushToOrg, ctx.githubAccountID, ctx.githubAccessToken)
+    githubPullCheck = credOps.checkGithubPullCreds(ctx.githubAccessToken)
+    if (not (githubPushCheck and githubPullCheck)):
+        exit(0)
+    
+
     toInclude, toExclude = utils.ReadUtils.getSyncConfig()
     for projectKey in toInclude:
         # Check credentials for given project
-        if (not credOps.checkCredentials(projectKey, ctx.bitbucketAccessToken, ctx.githubAccessToken)):
+        bitbucketPullCheck = credOps.checkBitbucketPullCreds(projectKey, ctx.bitbucketAccessToken)
+        if (not bitbucketPullCheck):
             exit(1)
         includeRegexList = toInclude[projectKey]
         excludeRegexList = toExclude[projectKey]

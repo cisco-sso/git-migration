@@ -11,14 +11,16 @@ def startSession(bitbucketAccountID, bitbucketAccessToken, githubAccountID, gith
     credOps = credOperations.credOps(bitbucketAPI, githubAPI)
     repoOps = repoOperations.repoOps(bitbucketAPI, githubAPI)
     log = utils.LogUtils.getLogger(os.path.basename(__file__))
+    targetOrg = utils.ReadUtils.getTargetOrg()
     # Ask for migration destination
     pushAnswer = questionary.select("Migrate repositories to?",
-                                    choices=["GitHub CX Engineering Org", "Personal Github Account"]).ask()
-    pushToOrg = pushAnswer == "GitHub CX Engineering Org"
+                                    choices=["GitHub {} org".format(targetOrg), "Personal Github Account"]).ask()
+    pushToOrg = pushAnswer == "GitHub {} org".format(targetOrg)
 
-    # Check if credentials are right to push to the chosen destination
-    pushCheckPassed = credOps.checkCredsForPush(pushToOrg, githubAccountID, githubAccessToken)
-    if (not pushCheckPassed):
+    # Check if credentials are right and can push to the chosen destination
+    githubPushCheck = credOps.checkGithubPushCreds(pushToOrg, githubAccountID, githubAccessToken)
+    githubPullCheck = credOps.checkGithubPullCreds(githubAccessToken)
+    if (not (githubPushCheck and githubPullCheck)):
         exit(0)
 
     # Get list of projects
@@ -29,7 +31,8 @@ def startSession(bitbucketAccountID, bitbucketAccessToken, githubAccountID, gith
 
     # Check access to BitBucket project and check GitHub credentials
     [projectName, projectKey] = projectAnswer.split(":")
-    if (not credOps.checkCredentials(projectKey, bitbucketAccessToken, githubAccessToken)):
+    bitbucketPullCheck = credOps.checkBitbucketPullCreds(projectKey, bitbucketAccessToken)
+    if (not bitbucketPullCheck):
         exit(1)
 
     # Get list of all repos

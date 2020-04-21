@@ -14,6 +14,7 @@ class repoOps:
         self.bitbucketAPI = bitbucketAPI
         self.githubAPI = githubAPI
         self.log = utils.LogUtils.getLogger(os.path.basename(__file__))
+        self.targetOrg = utils.ReadUtils.getTargetOrg()
 
     # Returns list of all projects on BitBucket
     def getBitbucketProjects(self, bitbucketAccessToken):
@@ -65,7 +66,7 @@ class repoOps:
                      githubAccessToken):
         processedRepos = []
         newRepos = 0
-        self.log.info("Processing repos from project {}. pushToOrg = {}".format(projectKey, pushToOrg))
+        self.log.info("Processing repos from project {}".format(projectKey))
 
         for repoName in repositories:
             # Add name
@@ -84,20 +85,20 @@ class repoOps:
 
             # Add GitHub Link
             if (pushToOrg):
-                # Check if same repository already exists on GitHub ***REMOVED*** Org
+                # Check if same repository already exists on GitHub target org
                 # TODO(***REMOVED***): Must parameterize the target org on Github
                 #   Place in Config file, instead of hard-coding here
-                githubOrgRepoCheckLink = self.githubAPI + "/repos/***REMOVED***/{}".format(repoName)
+                githubOrgRepoCheckLink = self.githubAPI + "/repos/{}/{}".format(self.targetOrg, repoName)
                 githubOrgRepoCheck = requests.get(githubOrgRepoCheckLink,
                                                   headers={"Authorization": "Bearer {}".format(githubAccessToken)})
                 # Repository with a similar name already exists on GitHub
                 if (githubOrgRepoCheck.status_code != 404):
                     githubOrgRepoCheck = json.loads(githubOrgRepoCheck.text)
-                    self.log.info("Repo {} - Exists on ***REMOVED*** org".format(repoName), repoName=repoName)
+                    self.log.info("Repo {} - Exists on {} org".format(repoName, self.targetOrg), repoName=repoName)
                     repoInfo["githubLink"] = githubOrgRepoCheck["clone_url"]
                 else:
                     newRepos += 1
-                    self.log.info("Repo {} - Doesn't exist on ***REMOVED*** org".format(repoName), repoName=repoName)
+                    self.log.info("Repo {} - Doesn't exist on {} org".format(repoName, self.targetOrg), repoName=repoName)
             else:
                 # Check if same repository already exists on GitHub
                 githubRepoCheckLink = self.githubAPI + "/repos/{}/{}".format(githubAccountID, repoName)
@@ -120,7 +121,7 @@ class repoOps:
                       newRepos=newRepos)
         return processedRepos, totalRepos, newRepos
 
-    # Makes a new repo through API calls on either ***REMOVED*** org or GHE personal account and returns repo link
+    # Makes a new repo through API calls on either target org or GHE personal account and returns repo link
     def makeNewRepo(self, pushToOrg, repo, githubAccountID, githubAccessToken):
         # API call to make new remote repo on GitHub
         repoName = repo["name"]
@@ -130,11 +131,11 @@ class repoOps:
             requestPayload["description"] = utils.StringUtils.remove_control_characters(repo["description"])
 
         if (pushToOrg):
-            # Create new repo of same name on GitHub ***REMOVED*** Org
-            gitResponse = requests.post(self.githubAPI + "/orgs/***REMOVED***/repos",
+            # Create new repo of same name on GitHub target org
+            gitResponse = requests.post(self.githubAPI + "/orgs/{}/repos".format(self.targetOrg),
                                         data=json.dumps(requestPayload),
                                         headers={"Authorization": "Bearer {}".format(githubAccessToken)})
-            self.log.debug("New repo {} created on GitHub ***REMOVED***".format(repoName), repoName=repoName)
+            self.log.debug("New repo {} created on GitHub {}".format(repoName, self.targetOrg), repoName=repoName)
         else:
             # Create new repo of same name on GitHub Account
             gitResponse = requests.post(self.githubAPI + "/user/repos",
@@ -199,10 +200,10 @@ class repoOps:
             self.log.info("{} synced".format(repoName), repoName=repoName)
             utils.LogUtils.logLight(color.Fore.GREEN, "{} synced".format(repoName))
 
-    # Get list of all teams from GHE ***REMOVED*** org
+    # Get list of all teams from GHE target org
     def getTeamsInfo(self, githubAccessToken):
         self.log.debug("Fetching teams list from GitHub")
-        teamsInfoList = requests.get(self.githubAPI + "/orgs/***REMOVED***/teams",
+        teamsInfoList = requests.get(self.githubAPI + "/orgs/{}/teams".format(self.targetOrg),
                                      headers={"Authorization": "Bearer {}".format(githubAccessToken)})
         teamsInfoList = json.loads(teamsInfoList.text)
         return teamsInfoList
@@ -216,7 +217,7 @@ class repoOps:
 
             # Get Team's ID
             self.log.debug("Fetching Team ID", teamName=team)
-            teamInfo = requests.get(self.githubAPI + "/orgs/***REMOVED***/teams/{}".format(team),
+            teamInfo = requests.get(self.githubAPI + "/orgs/{}/teams/{}".format(self.targetOrg, team),
                                     headers={"Authorization": "Bearer {}".format(githubAccessToken)})
             teamInfo = json.loads(teamInfo.text)
             teamID = teamInfo['id']
@@ -225,7 +226,7 @@ class repoOps:
             failureCount = 0
             for repo in repos:
                 # Assign repo to team
-                assignResponse = requests.put(self.githubAPI + "/teams/{}/repos/***REMOVED***/{}".format(teamID, repo),
+                assignResponse = requests.put(self.githubAPI + "/teams/{}/repos/{}/{}".format(teamID, self.targetOrg, repo),
                                               data=json.dumps(adminPermissions),
                                               headers={"Authorization": "Bearer {}".format(githubAccessToken)})
                 if (assignResponse.status_code != 204):
