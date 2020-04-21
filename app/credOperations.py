@@ -3,6 +3,18 @@ import os
 
 from app import utils
 
+# TODO (***REMOVED***): Potential to refactor
+
+#   CredOps is conflating github checks as well as bitbucket checks into one
+#   function.  If you think about unit testing, having credOps.checkCredentials
+#   do oprations on Bitbucket AND Github is less testable.  Think about
+#   decomposing into smaller units.  It would be better if github operations
+#   were in individaul github functions, and the same as bitbucket.
+#
+#     credOps.checkBitbucketPullCreds
+#     credOps.checkGithubPullCreds
+#     credOps.checkGithubPushCreds
+
 
 class credOps:
     def __init__(self, bitbucketAPI, githubAPI):

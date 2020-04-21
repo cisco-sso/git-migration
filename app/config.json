@@ -1,10 +1,10 @@
 {
   "syncConfig": {
     "include": {
-      "***REMOVED***": ["^***REMOVED***-*$"]
+      "***REMOVED***": ["***REMOVED***-.*"]
     },
     "exclude": {
-      "***REMOVED***": ["docs"],
+      "***REMOVED***": [***REMOVED***],
       "***REMOVED***": [],
       "***REMOVED***": []
     }

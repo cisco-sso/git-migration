@@ -57,7 +57,7 @@ class repoOps:
 
             # Populate the project names
             # repoNames += [ { 'name':"{}".format(repo["name"]) } for repo in projectRepos["values"]]
-            repoNames += ["{}".format(repo["name"]) for repo in projectRepos["values"]]
+            repoNames += [repo["name"] for repo in projectRepos["values"]]
         return repoNames
 
     # Process the list of repositories for a project and return metadata and repository links
@@ -85,6 +85,8 @@ class repoOps:
             # Add GitHub Link
             if (pushToOrg):
                 # Check if same repository already exists on GitHub ***REMOVED*** Org
+                # TODO(***REMOVED***): Must parameterize the target org on Github
+                #   Place in Config file, instead of hard-coding here
                 githubOrgRepoCheckLink = self.githubAPI + "/repos/***REMOVED***/{}".format(repoName)
                 githubOrgRepoCheck = requests.get(githubOrgRepoCheckLink,
                                                   headers={"Authorization": "Bearer {}".format(githubAccessToken)})

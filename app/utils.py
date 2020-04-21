@@ -31,9 +31,9 @@ class RegexUtils():
         resultRepos = []
         for pattern in regexList:
             if (excludeMatches):
-                result = [repoName for repoName in repositories if not re.search(pattern, repoName)]
+                result = [repoName for repoName in repositories if not re.match(pattern, repoName)]
             else:
-                result = [repoName for repoName in repositories if re.search(pattern, repoName)]
+                result = [repoName for repoName in repositories if re.match(pattern, repoName)]
             resultRepos += result
         resultRepos = sorted(list(set(resultRepos)))
         return resultRepos
