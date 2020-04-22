@@ -83,6 +83,7 @@ class RepoOps:
             # Add BitBucket Link
             link = list(filter(utils.MiscUtils.is_http, bitbucket_repo_response["links"]["clone"]))
             repo_info["bitbucket_link"] = link[0]["href"]
+            # TODO(***REMOVED***): Can you fix highly redundant, hard-to-index messages everywhere?
             self.log.debug("Added {} repository details from BitBucket".format(repo_name), repo_name=repo_name)
 
             # Add GitHub Link
@@ -144,6 +145,8 @@ class RepoOps:
             git_response = requests.post(self.github_api + "/orgs/{}/repos".format(self.target_org),
                                          data=json.dumps(request_payload),
                                          headers={"Authorization": "Bearer {}".format(github_access_token)})
+            # TODO(***REMOVED***): Please check return error, and implement error handling for every network call.
+            #   Perhaps a try catch aroundany particular repo in the sync_repos for loop
             self.log.debug("New repo {} created on GitHub {}".format(repo_name, self.target_org),
                            repo_name=repo_name,
                            target_org=self.target_org)
@@ -188,6 +191,8 @@ class RepoOps:
             if (not os.path.isdir(repo_name)):
                 bitbucket_link_domain = bitbucket_link.split("//")[1]
                 self.log.info("Cloning repo {}".format(repo_name), repo_name=repo_name)
+                # TODO(***REMOVED***): please change to sh.git library, and
+                #  don't forget to check return values and handle errors
                 os.system("git clone https://{}:{}@{}".format(bitbucket_account_id, bitbucket_access_token,
                                                               bitbucket_link_domain))
             os.chdir(repo_name)  # IMPORTANT DO NOT DELETE
@@ -212,6 +217,8 @@ class RepoOps:
 
     def sync_tags(self, repo, github_account_id, github_access_token):
         # Tags are populated in local repository when a clone is made, NO N***REMOVED*** TO PULL from bitbucket-remote
+        # TODO (***REMOVED***): The comment above is no longer true, because you're only cloning
+        #   if the directory doesn't exist.  I'm pretty sure you need to fix this.  Nice that you commented this.
         repo_name = repo['name']
         github_link = repo['github_link']
         github_link_domain = github_link.split("//")[1]
@@ -241,6 +248,8 @@ class RepoOps:
                                tag_name=tag_name)
                 success_tags.append(tag_name)
             except ErrorReturnCode as e:
+                # TODO (***REMOVED***): Very nice.  I'd like to see this pattern for the http requests you've made,
+                #   where thiere is no error checking.
                 self.log.error("Failed to push {} tag to origin for {} repo\tExit Code: {}".format(
                     tag_name, repo_name, e.exit_code),
                                repo_name=repo_name,
@@ -323,6 +332,7 @@ class RepoOps:
                 continue
             # Pull changes from origin (bitbucket)
             try:
+                # TODO (***REMOVED***): Add a --ff-only
                 git.pull(remote_name, branch_name)
                 self.log.debug("Pulled changes from remote branch {} on {} repo".format(branch_name, repo_name),
                                repo_name=repo_name,

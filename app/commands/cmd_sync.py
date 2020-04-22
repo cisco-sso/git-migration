@@ -120,6 +120,8 @@ def auto(ctx, run_once, personal_account, block_new_migrations):
         repo_ops.sync_repos(push_to_org, processed_repos, ctx.bitbucket_account_id, ctx.bitbucket_access_token,
                             ctx.github_account_id, ctx.github_access_token)
 
+        # TODO (***REMOVED***): still need to assign repos to teams
+        #   AND this needs to be reflected in the configuration file.
 
 @cli.command()
 @app_cli.pass_context
