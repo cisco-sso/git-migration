@@ -1,3 +1,4 @@
+import inspect
 import json
 import unicodedata
 import logging
@@ -8,6 +9,7 @@ import re
 import stat
 import colorama as color
 import structlog
+from structlog._frames import _find_first_app_frame_and_name
 
 
 class ReadUtils():
@@ -77,19 +79,15 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
         if not log_record.get('timestamp'):
             now = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
             log_record['timestamp'] = now
-        if log_record.get('func'):
-            log_record['function'] = log_record['func']
-        else:
-            log_record['function'] = record.funcName
         log_record['level'] = record.levelname
-        keep_keys = ["timestamp", "level", "name", "message", "function"]
+        keep_keys = ["timestamp", "level", "loc", "name", "message"]
         params = {}
         param_keys = [key for key in log_record if (key not in keep_keys)]
-        for key in param_keys:
+        for key in sorted(param_keys):
             params[key] = log_record[key]
             del log_record[key]
         if (params):
-            log_record["params"] = params
+            log_record.update(params)
 
 
 class LogUtils():
@@ -141,6 +139,33 @@ class LogUtils():
 
     @staticmethod
     def get_logger(logger_name, console_log_level, console_log_normal, file_log_level):
+        def add_code_location_processor(logger, _, event_dict):
+            # Mostly copy/pasta from:
+            #   https://stackoverflow.com/questions/54872447/how-to-add-code-line-number-using-structlog
+            # If by any chance the record already contains a `modline` key,
+            # (very rare) move that into a 'modline_original' key
+            if 'modline' in event_dict:
+                event_dict['modline_original'] = event_dict['modline']
+            f, name = _find_first_app_frame_and_name(additional_ignores=[
+                "logging",
+                __name__,
+            ])
+            if not f:
+                return event_dict
+            frameinfo = inspect.getframeinfo(f)
+            if not frameinfo:
+                return event_dict
+            module = inspect.getmodule(f)
+            if not module:
+                return event_dict
+            if frameinfo and module:
+                event_dict['loc'] = '{}:{}'.format(
+                    os.path.basename(frameinfo.filename),
+                    # module.__name__,  ## If you want to add a module name, uncomment this and modify the format above
+                    frameinfo.lineno,
+                )
+            return event_dict
+
         structlog.configure(
             processors=[
                 structlog.stdlib.filter_by_level,
@@ -150,6 +175,7 @@ class LogUtils():
                 structlog.processors.StackInfoRenderer(),
                 structlog.processors.format_exc_info,
                 structlog.processors.UnicodeDecoder(),
+                add_code_location_processor,
                 structlog.stdlib.render_to_log_kwargs,
             ],
             context_class=dict,
@@ -159,7 +185,7 @@ class LogUtils():
         )
 
         log_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] - %(funcName)s: %(message)s")
-        json_formatter = CustomJsonFormatter('(timestamp) (level) (name) (message)')
+        json_formatter = CustomJsonFormatter('(timestamp) (level) (loc) (message)')
 
         cur_dir_path = os.getcwd()
         if (not os.path.isdir(cur_dir_path + "/logs")):
