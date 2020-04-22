@@ -55,9 +55,6 @@ class AppCLI(click.MultiCommand):
 
 
 @click.command(cls=AppCLI, context_settings=CONTEXT_SETTINGS)
-# @click.option('--home',
-#               type=click.Path(exists=True, file_okay=False, resolve_path=True),
-#               help='Changes the folder to operate on.')
 @click.option('-v', '--verbose', is_flag=True, help='Enables verbose mode.')
 @click.option('--console-log-level',
               type=click.Choice(['debug', 'info', 'warning', 'error', 'critical'], case_sensitive=False),
@@ -78,8 +75,5 @@ def app(ctx, verbose, console_log_level, console_log_normal, file_log_level):
     ctx.console_log_level = console_log_level
     ctx.console_log_normal = console_log_normal
     ctx.file_log_level = file_log_level
-    print("Console log normal", console_log_normal)
     ctx.log = utils.LogUtils.get_logger(os.path.basename(__file__), console_log_level, console_log_normal,
                                         file_log_level)
-    # if home is not None:
-    #     ctx.home = home
