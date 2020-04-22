@@ -277,7 +277,7 @@ class RepoOps:
 
         # Push changes to each branch individually, log error if any fails and continue to next branch
         for remote in remote_branches:
-            [remote_name, branch_name] = remote.split('/')
+            [remote_name, branch_name] = remote.split('/', 1)
 
             self.log.info("Syncing {} branch for {} repo".format(branch_name, repo_name),
                           repo_name=repo_name,
