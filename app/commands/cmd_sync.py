@@ -1,6 +1,7 @@
 # Library imports
 import click
 import os
+import sys
 
 # Custom imports
 from app import utils
@@ -8,6 +9,14 @@ from app import repo_operations
 from app import cred_operations
 from app import interactive_sync
 from app import cli as app_cli
+
+
+def is_help_called():
+    return ('--help' in sys.argv) or ('-h' in sys.argv)
+
+
+def is_interactive():
+    return 'interactive' in sys.argv
 
 
 @click.group()
@@ -21,27 +30,34 @@ from app import cli as app_cli
               show_default='https://***REMOVED***/api/v3',
               type=str,
               help="GitHub API Base URL")
+# For the following options, ensure that 'interactive' mode prompts the user
+#   for missing settings, and 'auto' mode does not prom pt user and instead
+#   shows help usage.
 @click.option('--bitbucket-account-id',
-              prompt=len(os.environ.get('GIT_MIGRATION_BITBUCKET_ACCOUNT_ID', '')) == 0,
-              default=lambda: os.environ.get('GIT_MIGRATION_BITBUCKET_ACCOUNT_ID', ''),
+              prompt=not is_help_called() and is_interactive(),
+              required=not is_help_called() and not is_interactive(),
+              default=lambda: os.environ.get('GIT_MIGRATION_BITBUCKET_ACCOUNT_ID'),
               show_default='env GIT_MIGRATION_BITBUCKET_ACCOUNT_ID',
               type=str,
               help="BitBucket Account ID, usually CEC ID")
 @click.option('--bitbucket-access-token',
-              prompt=len(os.environ.get('GIT_MIGRATION_BITBUCKET_ACCESS_TOKEN', '')) == 0,
-              default=lambda: os.environ.get('GIT_MIGRATION_BITBUCKET_ACCESS_TOKEN', ''),
+              prompt=not is_help_called() and is_interactive(),
+              required=not is_help_called() and not is_interactive(),
+              default=lambda: os.environ.get('GIT_MIGRATION_BITBUCKET_ACCESS_TOKEN'),
               show_default='env GIT_MIGRATION_BITBUCKET_ACCESS_TOKEN',
               type=str,
               help="BitBucket Access Token")
 @click.option('--github-account-id',
-              prompt=len(os.environ.get('GIT_MIGRATION_GITHUB_ACCOUNT_ID', '')) == 0,
-              default=lambda: os.environ.get('GIT_MIGRATION_GITHUB_ACCOUNT_ID', ''),
+              prompt=not is_help_called() and is_interactive(),
+              required=not is_help_called() and not is_interactive(),
+              default=lambda: os.environ.get('GIT_MIGRATION_GITHUB_ACCOUNT_ID', None),
               show_default='env GIT_MIGRATION_GITHUB_ACCOUNT_ID',
               type=str,
               help="GitHub Account ID, usually CEC ID")
 @click.option('--github-access-token',
-              prompt=len(os.environ.get('GIT_MIGRATION_GITHUB_ACCESS_TOKEN', '')) == 0,
-              default=lambda: os.environ.get('GIT_MIGRATION_GITHUB_ACCESS_TOKEN', ''),
+              prompt=not is_help_called() and is_interactive(),
+              required=not is_help_called() and not is_interactive(),
+              default=lambda: os.environ.get('GIT_MIGRATION_GITHUB_ACCESS_TOKEN'),
               show_default='env GIT_MIGRATION_GITHUB_ACCESS_TOKEN',
               type=str,
               help="GitHub Access Token")
