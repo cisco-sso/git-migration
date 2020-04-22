@@ -173,6 +173,14 @@ class LogUtils():
         json_file_handler.setFormatter(json_formatter)
         json_file_handler.setLevel(LogUtils.resolve_log_level(file_log_level))
 
+        error_file_handler = logging.FileHandler("logs/migration-error.log")
+        error_file_handler.setFormatter(log_formatter)
+        error_file_handler.setLevel(logging.ERROR)
+
+        error_json_file_handler = logging.FileHandler("logs/migration-error-json.log")
+        error_json_file_handler.setFormatter(json_formatter)
+        error_json_file_handler.setLevel(logging.ERROR)
+
         console_handler = logging.StreamHandler()
         if (console_log_normal):
             console_handler.setFormatter(log_formatter)
@@ -183,6 +191,8 @@ class LogUtils():
         logger = structlog.get_logger(logger_name)
         logger.addHandler(file_handler)
         logger.addHandler(json_file_handler)
+        logger.addHandler(error_file_handler)
+        logger.addHandler(error_json_file_handler)
         logger.addHandler(console_handler)
 
         logger.setLevel(logging.DEBUG)
