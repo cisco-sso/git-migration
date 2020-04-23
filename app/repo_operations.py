@@ -272,9 +272,7 @@ class RepoOps:
             os.chdir("..")  # IMPORTANT DO NOT DELETE
 
     def sync_tags(self, repo, github_account_id, github_access_token):
-        # Tags are populated in local repository when a clone is made, NO N***REMOVED*** TO PULL from bitbucket-remote
-        # TODO (***REMOVED***): The comment above is no longer true, because you're only cloning
-        #   if the directory doesn't exist.  I'm pretty sure you need to fix this.  Nice that you commented this.
+        # Everytime, tags are fetched from remote (bitbucket) and then pushed to github
         repo_name = repo['name']
         github_link = repo['github_link']
         github_link_domain = github_link.split("//")[1]
@@ -284,7 +282,7 @@ class RepoOps:
         self.log.debug("Syncing Tags. Set origin to BitBucket", repo_name=repo_name, bitbucket_link=bitbucket_link)
 
         remote_tags = []
-        # Get remote tags
+        # List remote tags
         try:
             remote_tags = git('ls-remote', '--tags', 'origin').split('\n')
             remote_tags = [re.sub('^.*\trefs/tags/', '', tag_name) for tag_name in remote_tags if tag_name]
@@ -322,8 +320,6 @@ class RepoOps:
                 self.log.debug("Pushed tag for repository", result="SUCCESS", repo_name=repo_name, tag_name=tag_name)
                 success_tags.append(tag_name)
             except ErrorReturnCode as e:
-                # TODO (***REMOVED***): Very nice.  I'd like to see this pattern for the http requests you've made,
-                #   where thiere is no error checking.
                 self.log.error("Failed to push tag to github",
                                result="FAILED",
                                repo_name=repo_name,

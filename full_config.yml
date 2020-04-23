@@ -1,9 +1,9 @@
-# Organization to sync/mograte the repositories to
+# Organization to sync/migrate the repositories to
 target_org: ***REMOVED***
 
 # Specify log levels for console and files
 console_log_level: info
-console_log_normal: false # fasle: JSON formatted logs, true: Normal oneline string logs
+console_log_normal: false # false: JSON formatted logs, true: Normal oneline string logs
 file_log_level: debug
 
 sync_config:

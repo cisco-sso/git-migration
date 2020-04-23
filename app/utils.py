@@ -1,5 +1,4 @@
 import inspect
-import json
 import yaml
 import unicodedata
 import logging
