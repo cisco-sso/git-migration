@@ -1,0 +1,13 @@
+# Organization to sync/mograte the repositories to
+target_org: ***REMOVED***
+
+# Specify log levels for console and files
+console_log_level: info
+console_log_normal: false # fasle: JSON formatted logs, true: Normal oneline string logs
+file_log_level: debug
+
+sync_config:
+  include:
+    ***REMOVED***: ["***REMOVED***-.*"]
+  exclude:
+    ***REMOVED***: [***REMOVED***]

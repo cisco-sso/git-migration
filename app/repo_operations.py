@@ -113,20 +113,20 @@ class RepoOps:
                 github_org_repo_check = requests.get(github_org_repo_check_link,
                                                      headers={"Authorization": "Bearer {}".format(github_access_token)})
                 # Repository with a similar name already exists on GitHub
-                if (github_org_repo_check.status_code != 404):  # Existing repository
+                if (github_org_repo_check.status_code == 200):  # Existing repository
                     github_org_repo_check = json.loads(github_org_repo_check.text)
                     self.log.debug("Repository exists on organization",
                                    exists="YES",
                                    repo_name=repo_name,
                                    target_org=self.target_org)
                     repo_info["github_link"] = github_org_repo_check["clone_url"]
-                elif (github_org_repo_check.status_code != 200):  # Error
+                elif (github_org_repo_check.status_code != 404):  # Error
                     self.log.error("Failed to check for repository on github",
                                    result="FAILED",
                                    repo_name=repo_name,
                                    status_code=github_org_repo_check.status_code)
                     continue
-                else:  # Success: 200 OK
+                else:  # 404 Not Found
                     new_repos += 1
                     self.log.debug("Repository does not exist on organization",
                                    exists="NO",
@@ -138,19 +138,19 @@ class RepoOps:
                 github_repo_check = requests.get(github_repo_check_link,
                                                  headers={"Authorization": "Bearer {}".format(github_access_token)})
                 # Repository with a similar name already exists on GitHub
-                if (github_repo_check.status_code != 404):  # Existing repository
+                if (github_repo_check.status_code == 200):  # Existing repository
                     github_repo_check = json.loads(github_repo_check.text)
                     self.log.debug("Repository exists on GHE account",
                                    exists="YES",
                                    repo_name=repo_name,
                                    github_account_id=github_account_id)
                     repo_info["github_link"] = github_repo_check["clone_url"]
-                elif (github_repo_check.status_code != 200):  # Error
+                elif (github_repo_check.status_code != 404):  # Error
                     self.log.error("Failed to check for repository on github",
                                    result="FAILED",
                                    repo_name=repo_name,
                                    status_code=github_repo_check.status_code)
-                else:  # Success: 200 OK
+                else:  # 404 Not Found
                     new_repos += 1
                     self.log.debug("Repository does no exist on GHE account",
                                    exists="NO",
@@ -426,7 +426,7 @@ class RepoOps:
             self.log.debug("Syncing branches. Set origin to Github", repo_name=repo_name, github_link=github_link)
             # Push changes to origin
             try:
-                self.log.info("Pushing branch for repoistory", repo_name=repo_name, branch_name=branch_name)
+                self.log.info("Pushing branch for repository", repo_name=repo_name, branch_name=branch_name)
                 git.push('https://{}:{}@{}'.format(github_account_id, github_access_token, github_link_domain),
                          branch_name)
                 self.log.debug("Pushed changes to origin branch",

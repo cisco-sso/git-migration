@@ -1,5 +1,6 @@
 import inspect
 import json
+import yaml
 import unicodedata
 import logging
 import datetime
@@ -17,8 +18,8 @@ class ReadUtils():
     @staticmethod
     def get_sync_config():
         cur_dir_path = os.getcwd()
-        with open(cur_dir_path + "/config.json") as file:
-            sync_config = json.load(file)['sync_config']
+        with open(cur_dir_path + "/config.yml") as file:
+            sync_config = yaml.load(file, Loader=yaml.FullLoader)['sync_config']
         to_include = sync_config['include']
         to_exclude = sync_config['exclude']
         return to_include, to_exclude
@@ -27,8 +28,8 @@ class ReadUtils():
     @staticmethod
     def get_target_org():
         cur_dir_path = os.getcwd()
-        with open(cur_dir_path + "/config.json") as file:
-            target_org = json.load(file)['target_org']
+        with open(cur_dir_path + "/config.yml") as file:
+            target_org = yaml.load(file, Loader=yaml.FullLoader)['target_org']
         return target_org
 
 
@@ -103,22 +104,22 @@ class LogUtils():
     @staticmethod
     def get_console_log_level():
         cur_dir_path = os.getcwd()
-        with open(cur_dir_path + "/config.json") as file:
-            console_log_level = json.load(file)['console_log_level']
+        with open(cur_dir_path + "/config.yml") as file:
+            console_log_level = yaml.load(file, Loader=yaml.FullLoader)['console_log_level']
         return console_log_level
 
     @staticmethod
     def get_console_log_normal():
         cur_dir_path = os.getcwd()
-        with open(cur_dir_path + "/config.json") as file:
-            console_log_normal = json.load(file)['console_log_normal']
+        with open(cur_dir_path + "/config.yml") as file:
+            console_log_normal = yaml.load(file, Loader=yaml.FullLoader)['console_log_normal']
         return console_log_normal
 
     @staticmethod
     def get_file_log_level():
         cur_dir_path = os.getcwd()
-        with open(cur_dir_path + "/config.json") as file:
-            file_log_level = json.load(file)['file_log_level']
+        with open(cur_dir_path + "/config.yml") as file:
+            file_log_level = yaml.load(file, Loader=yaml.FullLoader)['file_log_level']
         return file_log_level
 
     @staticmethod

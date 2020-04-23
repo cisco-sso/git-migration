@@ -18,6 +18,7 @@ python-json-logger = "*"
 colorama = "*"
 structlog = "*"
 questionary = "*"
+pyyaml = "*"
 
 [requires]
 python_version = "3.7"
