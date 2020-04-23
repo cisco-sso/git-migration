@@ -64,10 +64,10 @@ def start_session(bitbucket_account_id, bitbucket_access_token, github_account_i
     # Sync existing repos and migrate over the new repos
     repo_ops.sync_repos(push_to_org, processed_repos, bitbucket_account_id, bitbucket_access_token, github_account_id,
                         github_access_token)
-    log.debug("Successful - {} repos synced and {} repositories migrated to GitHub".format(
-        total_repos - new_repos, new_repos),
+    log.debug("Successful - repositories synced/migrated to GitHub",
               total_repos=total_repos,
-              new_repos=new_repos)
+              synced_repos=total_repos - new_repos,
+              migrated_repos=new_repos)
 
     # --------- TEAM ASSIGNMENT ---------
     if (not push_to_org):
@@ -75,7 +75,7 @@ def start_session(bitbucket_account_id, bitbucket_access_token, github_account_i
     confirm_assign_to_team = questionary.confirm(
         'Do you want to assign some of the migrated repos to different teams?').ask()
     if (not confirm_assign_to_team):
-        log.debug("None of the {} migrated repositories assigned to any teams".format(new_repos), new_repos=new_repos)
+        log.debug("No migrated repositories assigned to teams", new_repos=new_repos)
         exit(0)
 
     # Fetch list of existing teams on github
@@ -99,7 +99,7 @@ def start_session(bitbucket_account_id, bitbucket_access_token, github_account_i
         if (len(repos_for_teams) != 0):
             repo_assignment[team] = repos_for_teams
         else:
-            log.debug("No repositories selected to assign to {} team".format(team), teamName=team)
+            log.debug("No repositories selected to assign to team", team_name=team)
 
     # Assign the repos to selected teams
     repo_ops.assign_repos_to_teams(repo_assignment, github_access_token)

@@ -28,7 +28,12 @@ class RepoOps:
         while (not is_last_page):
             projects_url = self.bitbucket_api + "/projects/?start={}".format(start)
             projects = requests.get(projects_url, headers={"Authorization": "Bearer {}".format(bitbucket_access_token)})
-            projects = json.loads(projects.text)
+            if (projects.status_code == 200):
+                self.log.debug("Fetched project list", result="SUCCESS")
+                projects = json.loads(projects.text)
+            else:
+                self.log.error("Failed to fetch project list", result="FAILED", status_code=projects.status_code)
+                exit(1)
 
             # Check if last page
             is_last_page = projects["isLastPage"]
@@ -45,12 +50,20 @@ class RepoOps:
         is_last_page = False
         start = 0
         # Get list of all repos
-        self.log.info("Fetching repository list for {}".format(project_key), project_key=project_key)
+        self.log.info("Fetching repository list", project_key=project_key)
         while (not is_last_page):
             # Get list of repos under the mentioned project on BitBucket
             project_repos_link = self.bitbucket_api + "/projects/{}/repos?start={}".format(project_key, start)
             project_repos = requests.get(project_repos_link,
                                          headers={"Authorization": "Bearer {}".format(bitbucket_access_token)})
+            # Error while fetching repos
+            if (project_repos.status_code != 200):
+                self.log.error("Failed to fetch repository list",
+                               result="FAILED",
+                               project_key=project_key,
+                               status_code=project_repos.status_code)
+                exit(1)
+
             project_repos = json.loads(project_repos.text)
 
             # Check if last page
@@ -59,7 +72,6 @@ class RepoOps:
                 start = project_repos["nextPageStart"]
 
             # Populate the project names
-            # repo_names += [ { 'name':"{}".format(repo["name"]) } for repo in project_repos["values"]]
             repo_names += [repo["name"] for repo in project_repos["values"]]
         return repo_names
 
@@ -68,7 +80,7 @@ class RepoOps:
                       github_access_token):
         processed_repos = []
         new_repos = 0
-        self.log.info("Processing repos from project {}".format(project_key), project_key=project_key)
+        self.log.info("Processing repos from project", project_key=project_key)
 
         for repo_name in repositories:
             # Add name
@@ -76,34 +88,48 @@ class RepoOps:
             bitbucket_repo_response = requests.get(
                 self.bitbucket_api + "/projects/{}/repos/{}".format(project_key, repo_name),
                 headers={"Authorization": "Bearer {}".format(bitbucket_access_token)})
-            bitbucket_repo_response = json.loads(bitbucket_repo_response.text)
+
+            if (bitbucket_repo_response.status_code == 404):
+                self.log.error("Repository not found on BitBucket", repo_name=repo_name)
+                continue
+            elif (bitbucket_repo_response.status_code != 200):
+                self.log.error("Failed to process repository", result="FAILED", repo_name=repo_name)
+                continue
+            else:  # Success: 200 OK
+                bitbucket_repo_response = json.loads(bitbucket_repo_response.text)
+
             # Add description
             if ("description" in bitbucket_repo_response):
                 repo_info["description"] = bitbucket_repo_response["description"]
             # Add BitBucket Link
             link = list(filter(utils.MiscUtils.is_http, bitbucket_repo_response["links"]["clone"]))
             repo_info["bitbucket_link"] = link[0]["href"]
-            # TODO(***REMOVED***): Can you fix highly redundant, hard-to-index messages everywhere?
-            self.log.debug("Added {} repository details from BitBucket".format(repo_name), repo_name=repo_name)
+            self.log.debug("Added repository details from BitBucket", repo_name=repo_name)
 
             # Add GitHub Link
             if (push_to_org):
                 # Check if same repository already exists on GitHub target org
-                # TODO(***REMOVED***): Must parameterize the target org on Github
-                #   Place in Config file, instead of hard-coding here
                 github_org_repo_check_link = self.github_api + "/repos/{}/{}".format(self.target_org, repo_name)
                 github_org_repo_check = requests.get(github_org_repo_check_link,
                                                      headers={"Authorization": "Bearer {}".format(github_access_token)})
                 # Repository with a similar name already exists on GitHub
-                if (github_org_repo_check.status_code != 404):
+                if (github_org_repo_check.status_code != 404):  # Existing repository
                     github_org_repo_check = json.loads(github_org_repo_check.text)
-                    self.log.debug("Repo {} - Exists on {} org".format(repo_name, self.target_org),
+                    self.log.debug("Repository exists on organization",
+                                   exists="YES",
                                    repo_name=repo_name,
                                    target_org=self.target_org)
                     repo_info["github_link"] = github_org_repo_check["clone_url"]
-                else:
+                elif (github_org_repo_check.status_code != 200):  # Error
+                    self.log.error("Failed to check for repository on github",
+                                   result="FAILED",
+                                   repo_name=repo_name,
+                                   status_code=github_org_repo_check.status_code)
+                    continue
+                else:  # Success: 200 OK
                     new_repos += 1
-                    self.log.debug("Repo {} - Doesn't exist on {} org".format(repo_name, self.target_org),
+                    self.log.debug("Repository does not exist on organization",
+                                   exists="NO",
                                    repo_name=repo_name,
                                    target_org=self.target_org)
             else:
@@ -112,23 +138,30 @@ class RepoOps:
                 github_repo_check = requests.get(github_repo_check_link,
                                                  headers={"Authorization": "Bearer {}".format(github_access_token)})
                 # Repository with a similar name already exists on GitHub
-                if (github_repo_check.status_code != 404):
+                if (github_repo_check.status_code != 404):  # Existing repository
                     github_repo_check = json.loads(github_repo_check.text)
-                    self.log.debug("Repo {} - Exists on GHE account {}".format(repo_name, github_account_id),
+                    self.log.debug("Repository exists on GHE account",
+                                   exists="YES",
                                    repo_name=repo_name,
                                    github_account_id=github_account_id)
                     repo_info["github_link"] = github_repo_check["clone_url"]
-                else:
+                elif (github_repo_check.status_code != 200):  # Error
+                    self.log.error("Failed to check for repository on github",
+                                   result="FAILED",
+                                   repo_name=repo_name,
+                                   status_code=github_repo_check.status_code)
+                else:  # Success: 200 OK
                     new_repos += 1
-                    self.log.debug("Repo {} - Doesn't exist on GHE account".format(repo_name),
+                    self.log.debug("Repository does no exist on GHE account",
+                                   exists="NO",
                                    repo_name=repo_name,
                                    github_account_id=github_account_id)
             processed_repos.append(repo_info)
         total_repos = len(processed_repos)
-        self.log.info("Syncing {} repositories, {} will be newly migrated to GitHub".format(
-            total_repos - new_repos, new_repos),
+        self.log.info("Syncing/Migrating repositories to GitHub",
                       total_repos=total_repos,
-                      new_repos=new_repos)
+                      to_sync=total_repos - new_repos,
+                      to_migrate=new_repos)
         return processed_repos, total_repos, new_repos
 
     # Makes a new repo through API calls on either target org or GHE personal account and returns repo link
@@ -145,9 +178,14 @@ class RepoOps:
             git_response = requests.post(self.github_api + "/orgs/{}/repos".format(self.target_org),
                                          data=json.dumps(request_payload),
                                          headers={"Authorization": "Bearer {}".format(github_access_token)})
-            # TODO(***REMOVED***): Please check return error, and implement error handling for every network call.
-            #   Perhaps a try catch aroundany particular repo in the sync_repos for loop
-            self.log.debug("New repo {} created on GitHub {}".format(repo_name, self.target_org),
+            if (git_response.status_code != 201):
+                self.log.error("Failed to create new repository on organization",
+                               result="FAILED",
+                               repo_name=repo_name,
+                               target_org=self.target_org)
+                return None
+            self.log.debug("New repository created on GitHub organization",
+                           result="SUCCESS",
                            repo_name=repo_name,
                            target_org=self.target_org)
         else:
@@ -155,7 +193,14 @@ class RepoOps:
             git_response = requests.post(self.github_api + "/user/repos",
                                          data=json.dumps(request_payload),
                                          headers={"Authorization": "Bearer {}".format(github_access_token)})
-            self.log.debug("New repo {} created on GitHub {} account".format(repo_name, github_account_id),
+            if (git_response.status_code != 201):
+                self.log.error("Failed to create new repository on personal account",
+                               result="FAILED",
+                               repo_name=repo_name,
+                               github_account_id=github_account_id)
+                return None
+            self.log.debug("New repository created on GitHub account",
+                           result="SUCCESS",
                            repo_name=repo_name,
                            github_account_id=github_account_id)
 
@@ -182,37 +227,48 @@ class RepoOps:
                 # github_link = repo['github_link']
                 pass
             else:
-                repo['github_link'] = self.make_new_repo(push_to_org, repo, github_account_id, github_access_token)
-                # github_link = repo['github_link']
+                github_link = self.make_new_repo(push_to_org, repo, github_account_id, github_access_token)
+                if (github_link is None):
+                    self.log.error("Failed to make new repository", result="FAILED", repo_name=repo_name)
+                    continue
+                repo['github_link'] = github_link
             bitbucket_link = repo['bitbucket_link']
 
-            self.log.info("Syncing repo {}".format(repo_name), repo_name=repo_name)
+            self.log.info("Syncing repository", repo_name=repo_name)
+
             # Clone the repository from BitBucket
             if (not os.path.isdir(repo_name)):
+
                 bitbucket_link_domain = bitbucket_link.split("//")[1]
-                self.log.info("Cloning repo {}".format(repo_name), repo_name=repo_name)
-                # TODO(***REMOVED***): please change to sh.git library, and
-                #  don't forget to check return values and handle errors
-                os.system("git clone https://{}:{}@{}".format(bitbucket_account_id, bitbucket_access_token,
-                                                              bitbucket_link_domain))
+                self.log.info("Cloning repository", repo_name=repo_name)
+                try:
+                    git.clone("https://{}:{}@{}".format(bitbucket_account_id, bitbucket_access_token,
+                                                        bitbucket_link_domain))
+                    self.log.debug("Cloned repository", result="SUCCESS", repo_name=repo_name)
+                except ErrorReturnCode as e:
+                    self.log.error("Failed to cloen repository",
+                                   result="FAILED",
+                                   repo_name=repo_name,
+                                   exit_code=e.exit_code)
+                    continue
+
             os.chdir(repo_name)  # IMPORTANT DO NOT DELETE
             tags_sync_success, all_tags, failed_tags = self.sync_tags(repo, github_account_id, github_access_token)
             if (not tags_sync_success):
-                self.log.warning("Failed to sync {} tags for {} repo".format(failed_tags, repo_name),
+                self.log.warning("Failed to sync tags for repository",
+                                 result="FAILED",
                                  repo_name=repo_name,
                                  failed_tags=failed_tags)
             branches_sync_success, all_branches, failed_branches = self.sync_branches(
                 repo, github_account_id, github_access_token)
             if (not branches_sync_success):
-                self.log.warning("Failed to sync {} branches for {} repo".format(failed_branches, repo_name),
+                self.log.warning("Failed to sync branches for repository",
+                                 result="FAILED",
                                  repo_name=repo_name,
                                  failed_branches=failed_branches)
 
             if (tags_sync_success and branches_sync_success):
-                self.log.debug("Successfully synced all tags and branches for {} repo".format(repo_name),
-                               repo_name=repo_name,
-                               all_tags=all_tags,
-                               all_branches=all_branches)
+                self.log.debug("Successfully synced all tags and branches for repository", repo_name=repo_name)
             os.chdir("..")  # IMPORTANT DO NOT DELETE
 
     def sync_tags(self, repo, github_account_id, github_access_token):
@@ -222,6 +278,30 @@ class RepoOps:
         repo_name = repo['name']
         github_link = repo['github_link']
         github_link_domain = github_link.split("//")[1]
+        bitbucket_link = repo['bitbucket_link']
+
+        git.remote('set-url', 'origin', bitbucket_link)
+        self.log.debug("Syncing Tags. Set origin to BitBucket", repo_name=repo_name, bitbucket_link=bitbucket_link)
+
+        remote_tags = []
+        # Get remote tags
+        try:
+            remote_tags = git('ls-remote', '--tags', 'origin').split('\n')
+            remote_tags = [re.sub('^.*\trefs/tags/', '', tag_name) for tag_name in remote_tags if tag_name]
+            self.log.debug("Listed remote tags", repo_name=repo_name)
+        except ErrorReturnCode as e:
+            self.log.warning("Could not list remote tags", repo_name=repo_name, exit_code=e.exit_code)
+
+        # Fetch tags from origin (bitbucket)
+        try:
+            git.fetch('origin')
+            self.log.debug("Fetched tags from BitBucket", result="SUCCESS", repo_name=repo_name)
+        except ErrorReturnCode as e:
+            self.log.error("Failed to fetch tags from BitBucket",
+                           result="FAILED",
+                           repo_name=repo_name,
+                           exit_code=e.exit_code)
+            return False, remote_tags, remote_tags
 
         tags = git.tag().split('\n')
         tags = [tag.lstrip().rstrip() for tag in tags if tag]
@@ -231,30 +311,25 @@ class RepoOps:
 
         # Set origin to github
         git.remote('set-url', 'origin', github_link)
-        self.log.debug("Syncing tags. Set {} origin to Github={}".format(repo_name, github_link),
-                       repo_name=repo_name,
-                       github_link=github_link)
+        self.log.debug("Syncing tags. Set origin to Github", repo_name=repo_name, github_link=github_link)
 
         # Push each tag individually, log error if any fails and continue to next tag
         for tag_name in tags:
-            self.log.info("Syncing {} tag for {} repo".format(tag_name, repo_name),
-                          repo_name=repo_name,
-                          tag_name=tag_name)
+            self.log.info("Syncing tag for repository", repo_name=repo_name, tag_name=tag_name)
             try:
                 git.push('https://{}:{}@{}'.format(github_account_id, github_access_token, github_link_domain),
                          tag_name)
-                self.log.debug("Pushed {} tag for {} repo".format(tag_name, repo_name),
-                               repo_name=repo_name,
-                               tag_name=tag_name)
+                self.log.debug("Pushed tag for repository", result="SUCCESS", repo_name=repo_name, tag_name=tag_name)
                 success_tags.append(tag_name)
             except ErrorReturnCode as e:
                 # TODO (***REMOVED***): Very nice.  I'd like to see this pattern for the http requests you've made,
                 #   where thiere is no error checking.
-                self.log.error("Failed to push {} tag to origin for {} repo\tExit Code: {}".format(
-                    tag_name, repo_name, e.exit_code),
+                self.log.error("Failed to push tag to github",
+                               result="FAILED",
                                repo_name=repo_name,
                                tag_name=tag_name,
-                               exit_code=e.exit_code)
+                               exit_code=e.exit_code,
+                               stderr=e.stderr)
                 failed_tags.append(tag_name)
                 continue
 
@@ -274,9 +349,7 @@ class RepoOps:
 
         # Set remote to bitbucket
         git.remote('set-url', 'origin', bitbucket_link)
-        self.log.debug("Syncing branches. Set {} origin to Bitbucket={}".format(repo_name, bitbucket_link),
-                       repo_name=repo_name,
-                       bitbucket_link=bitbucket_link)
+        self.log.debug("Syncing branches. Set origin to Bitbucket", repo_name=repo_name, bitbucket_link=bitbucket_link)
 
         remote_branches = git.branch("-r").split("\n")
         remote_branches = [
@@ -288,21 +361,20 @@ class RepoOps:
         for remote in remote_branches:
             [remote_name, branch_name] = remote.split('/', 1)
 
-            self.log.info("Syncing {} branch for {} repo".format(branch_name, repo_name),
-                          repo_name=repo_name,
-                          branch_name=branch_name)
+            self.log.info("Syncing branch for repository", repo_name=repo_name, branch_name=branch_name)
 
             # Set up a tracking branch for the remote branch (bitbucket) if it doesn't already exist locally
             if ((branch_name not in local_branches) and (remote_name == 'origin')):
                 # Set up a local tracking branch from origin (bitbucket)
                 try:
                     git.branch('--track', branch_name, remote)
-                    self.log.debug("Set up tracking branch {} for {} repo".format(branch_name, repo_name),
+                    self.log.debug("Set up tracking branch for repository",
+                                   result="SUCCESS",
                                    repo_name=repo_name,
                                    branch_name=branch_name)
                 except ErrorReturnCode as e:
-                    self.log.error("Failed to setup tracking branch {} for {} repo.\tExit Code: {}".format(
-                        branch_name, repo_name, e.exit_code),
+                    self.log.error("Failed to setup tracking branch for repository",
+                                   result="FAILED",
                                    repo_name=repo_name,
                                    branch_name=branch_name,
                                    exit_code=e.exit_code,
@@ -318,12 +390,13 @@ class RepoOps:
             # Checkout to the branch
             try:
                 git.checkout(branch_name)
-                self.log.debug("Checkout to {} branch on {} repo".format(branch_name, repo_name),
+                self.log.debug("Checkout to branch on repository",
+                               result="SUCCESS",
                                repo_name=repo_name,
                                branch_name=branch_name)
             except ErrorReturnCode as e:
-                self.log.error("Failed to checkout to {} branch on {} repo.\tExit Code: {}".format(
-                    branch_name, repo_name, e.exit_code),
+                self.log.error("Failed to checkout to branch on repository",
+                               result="SUCCESS",
                                repo_name=repo_name,
                                branch_name=branch_name,
                                exit_code=e.exit_code,
@@ -332,14 +405,14 @@ class RepoOps:
                 continue
             # Pull changes from origin (bitbucket)
             try:
-                # TODO (***REMOVED***): Add a --ff-only
-                git.pull(remote_name, branch_name)
-                self.log.debug("Pulled changes from remote branch {} on {} repo".format(branch_name, repo_name),
+                git.pull(remote_name, branch_name, "--ff-only")
+                self.log.debug("Pulled changes from remote branch",
+                               result="SUCCESS",
                                repo_name=repo_name,
                                branch_name=branch_name)
             except ErrorReturnCode as e:
-                self.log.error("Failed to pull changes for {} branch on {} repo.\tExit Code: {}".format(
-                    branch_name, repo_name, e.exit_code),
+                self.log.error("Failed to pull changes from remote branch",
+                               result="FAILED",
                                repo_name=repo_name,
                                branch_name=branch_name,
                                exit_code=e.exit_code,
@@ -350,22 +423,19 @@ class RepoOps:
             # Push changes to origin (github)
             # Set origin to github
             git.remote('set-url', 'origin', github_link)
-            self.log.debug("Syncing branches. Set {} origin to Github={}".format(repo_name, github_link),
-                           repo_name=repo_name,
-                           github_link=github_link)
+            self.log.debug("Syncing branches. Set origin to Github", repo_name=repo_name, github_link=github_link)
             # Push changes to origin
             try:
-                self.log.info("Pushing {} branch for {} repo".format(branch_name, repo_name),
-                              repo_name=repo_name,
-                              branch_name=branch_name)
+                self.log.info("Pushing branch for repoistory", repo_name=repo_name, branch_name=branch_name)
                 git.push('https://{}:{}@{}'.format(github_account_id, github_access_token, github_link_domain),
                          branch_name)
-                self.log.debug("Pushed changes to origin branch {} for {} repo".format(branch_name, repo_name),
+                self.log.debug("Pushed changes to origin branch",
+                               result="SUCCESS",
                                repo_name=repo_name,
                                branch_name=branch_name)
             except ErrorReturnCode as e:
-                self.log.error("Failed to push changes to origin {} branch for {} repo.\tExit Code: {}".format(
-                    branch_name, repo_name, e.exit_code),
+                self.log.error("Failed to push changes to origin branch",
+                               result="FAILED",
                                repo_name=repo_name,
                                branch_name=branch_name,
                                exit_code=e.exit_code,
@@ -374,13 +444,14 @@ class RepoOps:
                 continue
             # Success on syncing current branch
             success_branches.append(branch_name)
-            self.log.debug("Successfully synced {} branch for {} repo".format(branch_name, repo_name),
+            self.log.debug("Successfully synced branch for repository",
+                           result="SUCCESS",
                            repo_name=repo_name,
                            branch_name=branch_name)
 
             # Set origin back to bitbucket so the next branch can pull changes
             git.remote('set-url', 'origin', bitbucket_link)
-            self.log.debug("Syncing branches. Set {} origin to Bitbucket={}".format(repo_name, bitbucket_link),
+            self.log.debug("Syncing branches. Set origin to Bitbucket",
                            repo_name=repo_name,
                            bitbucket_link=bitbucket_link)
 
@@ -393,6 +464,9 @@ class RepoOps:
         self.log.info("Fetching teams list from GitHub")
         teams_info_list = requests.get(self.github_api + "/orgs/{}/teams".format(self.target_org),
                                        headers={"Authorization": "Bearer {}".format(github_access_token)})
+        if (teams_info_list.status_code != 200):
+            self.log.error("Failed to fetch teams list", result="FAILED", target_org=self.target_org)
+            exit(1)
         teams_info_list = json.loads(teams_info_list.text)
         return teams_info_list
 
@@ -401,12 +475,16 @@ class RepoOps:
         admin_permissions = {'permission': 'admin'}
         assign_result = {}
         for team, repos in repo_assignment.items():  # key, value :: team, repos
-            self.log.info("Assigning repos to {} team".format(team), teamName=team)
+            self.log.info("Assigning repos to team", teamName=team)
 
             # Get Team's ID
             self.log.info("Fetching Team ID", teamName=team)
             team_info = requests.get(self.github_api + "/orgs/{}/teams/{}".format(self.target_org, team),
                                      headers={"Authorization": "Bearer {}".format(github_access_token)})
+            if (team_info.status_code != 200):
+                self.log.error("Failed to fetch team information", result="FAILED", team_name=team)
+                self.log.error("No repositories assigned to team", result="FAILED", team_name=team)
+                continue
             team_info = json.loads(team_info.text)
             team_id = team_info['id']
 
@@ -420,20 +498,19 @@ class RepoOps:
                                                headers={"Authorization": "Bearer {}".format(github_access_token)})
                 if (assign_response.status_code != 204):
                     failure_count += 1
-                    self.log.warning("Failed to assign {} repo to {} team. Code {}".format(
-                        repo, team, assign_response.status_code),
+                    self.log.warning("Failed to assign repository to team",
+                                     result="FAILED",
                                      repo_name=repo,
                                      teamName=team,
-                                     errorCode=assign_response.status_code)
+                                     status_code=assign_response.status_code)
                 else:
                     success_count += 1
-                    self.log.debug("Assigned {} repo to {} team".format(repo, team), repo_name=repo, teamName=team)
+                    self.log.debug("Assigned repository to team", result="SUCCESS", repo_name=repo, teamName=team)
             assign_result[team] = {'success': success_count, 'failure': failure_count}
-            self.log.debug("Assigned {} repos to {} team".format(success_count, team),
-                           teamName=team,
-                           success_count=success_count)
+            self.log.debug("Assigned repositories to team", teamName=team, success_count=success_count)
             if (failure_count != 0):
-                self.log.warning("Failed to assign {} repos to {} team".format(failure_count, team),
+                self.log.warning("Failed to assign repositories to team",
+                                 result="FAILED",
                                  teamName=team,
                                  failure_count=failure_count)
         return assign_result

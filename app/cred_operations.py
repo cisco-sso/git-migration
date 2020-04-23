@@ -19,18 +19,22 @@ class CredOps:
         bitbucket_access_check = requests.get(bitbucket_access_check_link,
                                               headers={"Authorization": "Bearer {}".format(bitbucket_access_token)})
         if (bitbucket_access_check.status_code == 200):
-            self.log.debug("BitBucket credentials check PASSED", bitbucket_access_token=bitbucket_access_token)
+            self.log.debug("BitBucket credentials check", result="PASSED")
             return True
         else:
             if (bitbucket_access_check.status_code == 404):
-                self.log.error("Bitbucket Project not found: Please check the project key", project_key=project_key)
+                self.log.error("Bitbucket Project not found: Please check the project key",
+                               result="FAILED",
+                               project_key=project_key,
+                               status_code=bitbucket_access_check.status_code)
             elif (bitbucket_access_check.status_code == 401):
-                self.log.error("BitBucket Access Token Failed: Unauthorized",
-                               bitbucket_access_token=bitbucket_access_token)
+                self.log.error("BitBucket Access Token check: Unauthorized",
+                               result="FAILED",
+                               status_code=bitbucket_access_check.status_code)
             else:
-                self.log.error("BitBucket credentials check Failed: Code {}".format(bitbucket_access_check.status_code),
-                               bitbucket_access_token=bitbucket_access_token,
-                               statusCode=bitbucket_access_check.status_code)
+                self.log.error("BitBucket credentials check",
+                               result="FAILED",
+                               status_code=bitbucket_access_check.status_code)
             return False
 
     # Check if GitHub access tokens are valid
@@ -40,60 +44,65 @@ class CredOps:
         github_access_token_check = requests.get(github_access_token_check_link,
                                                  headers={"Authorization": "Bearer {}".format(github_access_token)})
         if (github_access_token_check.status_code == 200):
-            # TODO (***REMOVED***): Never log senstive data like credentials.  This also happens elsewhere in code.
-            # self.log.debug("GitHub credentials check PASSED", github_access_token=github_access_token)
-            # Also, please use structured logging key/values.  The above becomes
             self.log.debug("GitHub credentials check", result="PASSED")
             return True
         else:
             if (github_access_token_check.status_code == 401):
-                self.log.error("GitHub Access Token Failed: Unauthorized", github_access_token=github_access_token)
+                self.log.error("GitHub Access Token check: Unauthorized",
+                               result="FAILED",
+                               status_code=github_access_token_check.status_code)
             else:
-                self.log.error("GitHub credentials check Failed: Code {}".format(github_access_token_check.status_code),
-                               github_access_token=github_access_token,
-                               errorCode=github_access_token_check.status_code)
+                self.log.error("GitHub credentials check",
+                               result="FAILED",
+                               status_code=github_access_token_check.status_code)
             return False
 
     # Check if GitHub credentials allow to push to given destination
     def check_github_push_creds(self, push_to_org, github_account_id, github_access_token):
         if (push_to_org):
-            # TODO (parriiyer): The printing of variables in the message make
-            #  the message unindexable in any efficent way by elasticsearch.
-            #  Keep the messages the same, but only vary the key/values in
-            #  structlog.  Also remove redundacy.  Use the power of structured logging.
-            #
-            # This message:
-            # self.log.info("Checking credentials for push : {} organization".format(self.target_org),
-            #              pushDestination=self.target_org)
-            # Becomes this:
             self.log.info("Checking credentials for push to organization", target_org=self.target_org)
 
             is_member = requests.get(self.github_api + "/orgs/{}/members/{}".format(self.target_org, github_account_id),
                                      headers={"Authorization": "Bearer {}".format(github_access_token)})
             # API returns 401 if the user's access token is incorrect
             if (is_member.status_code == 401):
-                self.log.error("GitHub Access Token Failed: Unauthorized",
+                self.log.error("GitHub Access Token check: Unauthorized",
+                               result="FAILED",
                                github_account_id=github_account_id,
-                               github_access_token=github_access_token)
+                               status_code=is_member.status_code)
                 return False
             # API returns 204 if the person checking the membership is a member of the org
-            if (not is_member.status_code == 204):
-                self.log.error("Not a member of {} Organization".format(self.target_org),
-                               github_account_id=github_account_id)
+            elif (not is_member.status_code == 204):
+                self.log.error("Organization membership check: Not a member",
+                               result="FAILED",
+                               target_org=self.target_org,
+                               github_account_id=github_account_id,
+                               status_code=is_member.status_code)
                 return False
-            self.log.debug("Organization membership check PASSED!", github_account_id=github_account_id)
+            self.log.debug("Organization membership check",
+                           result="PASSED",
+                           target_org=self.target_org,
+                           github_account_id=github_account_id)
             return True
         else:
-            self.log.info("Checking credentials for push : {}".format(github_account_id),
-                          pushDestination=github_account_id)
+            self.log.info("Checking credentials for push", push_destination=github_account_id)
             # Check GitHub Access Token
             github_access_token_check_link = self.github_api + "/users/{}/repos".format(github_account_id)
             github_access_token_check = requests.get(github_access_token_check_link,
                                                      headers={"Authorization": "Bearer {}".format(github_access_token)})
             if (github_access_token_check.status_code == 401):
-                self.log.error("GitHub Access Token Failed: Unauthorized",
+                self.log.error("GitHub Access Token check: Unauthorized",
+                               result="FAILED",
                                github_account_id=github_account_id,
-                               github_access_token=github_access_token)
+                               status_code=github_access_token_check.status_code)
                 return False
-            self.log.debug("Push access check to personal account PASSED!", github_account_id=github_account_id)
+            elif (github_access_token_check.status_code != 200):
+                self.log.error("Github Access Token check",
+                               result="FAILED",
+                               github_account_id=github_account_id,
+                               status_code=github_access_token_check.status_code)
+                return False
+            self.log.debug("Push access check to personal account",
+                           result="PASSED",
+                           github_account_id=github_account_id)
             return True

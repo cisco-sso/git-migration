@@ -87,9 +87,6 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
             params[key] = log_record[key]
             del log_record[key]
         if (params):
-            # TODO(***REMOVED***): please delete the comment after you've read it.
-            #  Don't nest the keys under 'params'.  Makes indexing by elasticsearch
-            #  harder.  Just use top level keys.  I've already made the change for you
             log_record.update(params)
 
 
