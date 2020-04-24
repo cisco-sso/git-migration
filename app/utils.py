@@ -30,7 +30,7 @@ class ReadUtils():
         with open(cur_dir_path + "/config.yml") as file:
             target_org = yaml.load(file, Loader=yaml.FullLoader)['target_org']
         return target_org
-    
+
     # Read and return the prefix to be used for repo migrations and sync
     @staticmethod
     def get_prefix():
@@ -38,6 +38,7 @@ class ReadUtils():
         with open(cur_dir_path + "/config.yml") as file:
             prefix = yaml.load(file, Loader=yaml.FullLoader)['prefix']
         return prefix
+
 
 class RegexUtils():
     @staticmethod
@@ -78,6 +79,11 @@ class StringUtils():
     @staticmethod
     def remove_control_characters(s):
         return "".join(ch for ch in s if unicodedata.category(ch)[0] != "C")
+
+    # Redact an error message (which is in bytes format)
+    @staticmethod
+    def redact_error(error_message, to_redact, after_redact):
+        return error_message.replace(bytes(to_redact, 'utf-8'), bytes(after_redact, 'utf-8'))
 
 
 class CustomJsonFormatter(jsonlogger.JsonFormatter):

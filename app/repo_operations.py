@@ -112,7 +112,8 @@ class RepoOps:
             # Add GitHub Link
             if (push_to_org):
                 # Check if same repository already exists on GitHub target org
-                github_org_repo_check_link = self.github_api + "/repos/{}/{}".format(self.target_org, prefixed_repo_name)
+                github_org_repo_check_link = self.github_api + "/repos/{}/{}".format(
+                    self.target_org, prefixed_repo_name)
                 github_org_repo_check = requests.get(github_org_repo_check_link,
                                                      headers={"Authorization": "Bearer {}".format(github_access_token)})
                 # Repository with a similar name already exists on GitHub
@@ -285,7 +286,9 @@ class RepoOps:
                                  failed_branches=failed_branches)
 
             if (tags_sync_success and branches_sync_success):
-                self.log.debug("Successfully synced all tags and branches for repository", result="SUCCESS", repo_name=repo_name)
+                self.log.debug("Successfully synced all tags and branches for repository",
+                               result="SUCCESS",
+                               repo_name=repo_name)
             os.chdir("..")  # IMPORTANT DO NOT DELETE
 
     def sync_tags(self, repo, github_account_id, github_access_token):
@@ -293,32 +296,23 @@ class RepoOps:
         repo_name = repo['name']
         prefixed_repo_name = self.prefix + repo_name
         github_link = repo['github_link']
-        github_link_domain = github_link.split("//")[1]
         bitbucket_link = repo['bitbucket_link']
+
+        # Use this instead of setting the authenticated link as a new remote.
+        # Remote links get stored in git config
+        github_link_domain = github_link.split("//")[1]
+        authenticated_github_link = "https://{}:{}@{}".format(github_account_id, github_access_token,
+                                                              github_link_domain)
 
         git.remote('set-url', 'origin', bitbucket_link)
         self.log.debug("Syncing Tags. Set origin to BitBucket", repo_name=repo_name, bitbucket_link=bitbucket_link)
 
-        remote_tags = []
-        # List remote tags
-        try:
-            remote_tags = git('ls-remote', '--tags', 'origin').split('\n')
-            remote_tags = [re.sub('^.*\trefs/tags/', '', tag_name) for tag_name in remote_tags if tag_name]
-            self.log.debug("Listed remote tags", repo_name=repo_name)
-        except ErrorReturnCode as e:
-            self.log.warning("Could not list remote tags", repo_name=repo_name, exit_code=e.exit_code)
-
         # Fetch tags from origin (bitbucket)
-        try:
-            git.fetch('origin')
-            self.log.debug("Fetched tags from BitBucket", result="SUCCESS", repo_name=repo_name)
-        except ErrorReturnCode as e:
-            self.log.error("Failed to fetch tags from BitBucket",
-                           result="FAILED",
-                           repo_name=repo_name,
-                           exit_code=e.exit_code)
-            return False, remote_tags, remote_tags
+        self.log.info("Fetching refs (tags) from origin", repo_name=repo_name)
+        git.fetch('origin')
+        self.log.debug("Fetched refs (tags) from BitBucket", result="SUCCESS", repo_name=repo_name)
 
+        # List all tags
         tags = git.tag().split('\n')
         tags = [tag.lstrip().rstrip() for tag in tags if tag]
 
@@ -326,25 +320,34 @@ class RepoOps:
         failed_tags = []
 
         # Set origin to github
-        git.remote('set-url', 'origin', github_link)
-        self.log.debug("Syncing tags. Set origin to Github", repo_name=prefixed_repo_name, prefix=self.prefix, github_link=github_link)
+        # git.remote('set-url', 'origin', github_link)
+        self.log.debug("Syncing tags. Set origin to Github",
+                       repo_name=prefixed_repo_name,
+                       prefix=self.prefix,
+                       github_link=github_link)
 
         # Push each tag individually, log error if any fails and continue to next tag
         for tag_name in tags:
             self.log.info("Syncing tag for repository", repo_name=repo_name, tag_name=tag_name)
             try:
-                git.push('https://{}:{}@{}'.format(github_account_id, github_access_token, github_link_domain),
-                         tag_name)
-                self.log.debug("Pushed tag for repository", result="SUCCESS", repo_name=prefixed_repo_name, prefix=self.prefix, tag_name=tag_name)
+                tag_refspec = "refs/tags/{}:refs/tags/{}".format(tag_name, tag_name)
+                git.push(authenticated_github_link, tag_refspec)
+                self.log.debug("Pushed tag for repository",
+                               result="SUCCESS",
+                               repo_name=prefixed_repo_name,
+                               prefix=self.prefix,
+                               tag_name=tag_name)
                 success_tags.append(tag_name)
             except ErrorReturnCode as e:
+                # Redact or remove the access token before logging
+                stderr = utils.StringUtils.redact_error(e.stderr, github_access_token, "<ACCESS-TOKEN>")
                 self.log.error("Failed to push tag to github",
                                result="FAILED",
                                repo_name=prefixed_repo_name,
                                prefix=self.prefix,
                                tag_name=tag_name,
                                exit_code=e.exit_code,
-                               stderr=e.stderr)
+                               stderr=stderr)
                 failed_tags.append(tag_name)
                 continue
 
@@ -356,22 +359,31 @@ class RepoOps:
         prefixed_repo_name = self.prefix + repo_name
         github_link = repo['github_link']
         bitbucket_link = repo['bitbucket_link']
-        github_link_domain = github_link.split("//")[1]
 
-        success_branches = []
-        failed_branches = []
-        local_branches = git.branch().split("\n")
-        local_branches = [branch.lstrip('* ').rstrip() for branch in local_branches if (branch)]
+        # Use this instead of setting the authenticated link as a new remote.
+        # Remote links get stored in git config
+        github_link_domain = github_link.split("//")[1]
+        authenticated_github_link = "https://{}:{}@{}".format(github_account_id, github_access_token,
+                                                              github_link_domain)
 
         # Set remote to bitbucket
         git.remote('set-url', 'origin', bitbucket_link)
         self.log.debug("Syncing branches. Set origin to Bitbucket", repo_name=repo_name, bitbucket_link=bitbucket_link)
 
+        # Fetch branches from origin (bitbucket)
+        self.log.info("Fetching refs (branches) from origin", repo_name=repo_name)
+        git.fetch('origin')
+        self.log.debug("Fetched refs (branches) from BitBucket", result="SUCCESS", repo_name=repo_name)
+
+        # List remote branches
         remote_branches = git.branch("-r").split("\n")
         remote_branches = [
             remote.lstrip().rstrip() for remote in remote_branches
             if (remote and not re.match("^.*/HEAD -> .*$", remote))
         ]
+
+        success_branches = []
+        failed_branches = []
 
         # Push changes to each branch individually, log error if any fails and continue to next branch
         for remote in remote_branches:
@@ -379,100 +391,35 @@ class RepoOps:
 
             self.log.info("Syncing branch for repository", repo_name=repo_name, branch_name=branch_name)
 
-            # Set up a tracking branch for the remote branch (bitbucket) if it doesn't already exist locally
-            if ((branch_name not in local_branches) and (remote_name == 'origin')):
-                # Set up a local tracking branch from origin (bitbucket)
+            if (remote_name == 'origin'):
+                branch_refspec = "refs/remotes/origin/{}:refs/heads/{}".format(branch_name, branch_name)
                 try:
-                    git.branch('--track', branch_name, remote)
-                    self.log.debug("Set up tracking branch for repository",
+                    self.log.info("Pushing branch for repository",
+                                  repo_name=prefixed_repo_name,
+                                  prefix=self.prefix,
+                                  branch_name=branch_name)
+                    git.push(authenticated_github_link, branch_refspec)
+                    # Success on syncing current branch
+                    self.log.debug("Successfully synced branch for repository",
                                    result="SUCCESS",
-                                   repo_name=repo_name,
+                                   repo_name=prefixed_repo_name,
+                                   prefix=self.prefix,
                                    branch_name=branch_name)
+                    success_branches.append(branch_name)
                 except ErrorReturnCode as e:
-                    self.log.error("Failed to setup tracking branch for repository",
+                    # Redact or remove the access token before logging
+                    stderr = utils.StringUtils.redact_error(e.stderr, github_access_token, "<ACCESS-TOKEN>")
+                    self.log.error("Failed to push changes to origin branch",
                                    result="FAILED",
-                                   repo_name=repo_name,
+                                   repo_name=prefixed_repo_name,
+                                   prefix=self.prefix,
                                    branch_name=branch_name,
                                    exit_code=e.exit_code,
-                                   stderr=e.stderr)
+                                   stderr=stderr)
                     failed_branches.append(branch_name)
                     continue
-            elif (remote_name == 'origin'):
-                pass
             else:
                 continue
-
-            # Pull changes for the tracking branch from origin (bitbucket)
-            # Checkout to the branch
-            try:
-                git.checkout(branch_name)
-                self.log.debug("Checkout to branch on repository",
-                               result="SUCCESS",
-                               repo_name=repo_name,
-                               branch_name=branch_name)
-            except ErrorReturnCode as e:
-                self.log.error("Failed to checkout to branch on repository",
-                               result="SUCCESS",
-                               repo_name=repo_name,
-                               branch_name=branch_name,
-                               exit_code=e.exit_code,
-                               stderr=e.stderr)
-                failed_branches.append(branch_name)
-                continue
-            # Pull changes from origin (bitbucket)
-            try:
-                git.pull(remote_name, branch_name, "--ff-only")
-                self.log.debug("Pulled changes from remote branch",
-                               result="SUCCESS",
-                               repo_name=repo_name,
-                               branch_name=branch_name)
-            except ErrorReturnCode as e:
-                self.log.error("Failed to pull changes from remote branch",
-                               result="FAILED",
-                               repo_name=repo_name,
-                               branch_name=branch_name,
-                               exit_code=e.exit_code,
-                               stderr=e.stderr)
-                failed_branches.append(branch_name)
-                continue
-
-            # Push changes to origin (github)
-            # Set origin to github
-            git.remote('set-url', 'origin', github_link)
-            self.log.debug("Syncing branches. Set origin to Github", repo_name=prefixed_repo_name, prefix=self.prefix, github_link=github_link)
-            # Push changes to origin
-            try:
-                self.log.info("Pushing branch for repository", repo_name=prefixed_repo_name, prefix=self.prefix, branch_name=branch_name)
-                git.push('https://{}:{}@{}'.format(github_account_id, github_access_token, github_link_domain),
-                         branch_name)
-                self.log.debug("Pushed changes to origin branch",
-                               result="SUCCESS",
-                               repo_name=prefixed_repo_name,
-                               prefix=self.prefix,
-                               branch_name=branch_name)
-            except ErrorReturnCode as e:
-                self.log.error("Failed to push changes to origin branch",
-                               result="FAILED",
-                               repo_name=prefixed_repo_name,
-                               prefix=self.prefix,
-                               branch_name=branch_name,
-                               exit_code=e.exit_code,
-                               stderr=e.stderr)
-                failed_branches.append(branch_name)
-                continue
-            # Success on syncing current branch
-            success_branches.append(branch_name)
-            self.log.debug("Successfully synced branch for repository",
-                           result="SUCCESS",
-                           repo_name=prefixed_repo_name,
-                           prefix=self.prefix,
-                           branch_name=branch_name)
-
-            # Set origin back to bitbucket so the next branch can pull changes
-            git.remote('set-url', 'origin', bitbucket_link)
-            self.log.debug("Syncing branches. Set origin to Bitbucket",
-                           repo_name=repo_name,
-                           bitbucket_link=bitbucket_link)
 
         all_remote_branches = [branch_name.split('origin/')[1] for branch_name in remote_branches]
         branches_sync_success = set(all_remote_branches) == set(success_branches)
@@ -511,10 +458,10 @@ class RepoOps:
             failure_count = 0
             for prefixed_repo_name in prefixed_repos:
                 # Assign repo to team
-                assign_response = requests.put(self.github_api +
-                                               "/teams/{}/repos/{}/{}".format(team_id, self.target_org, prefixed_repo_name),
-                                               data=json.dumps(admin_permissions),
-                                               headers={"Authorization": "Bearer {}".format(github_access_token)})
+                assign_response = requests.put(
+                    self.github_api + "/teams/{}/repos/{}/{}".format(team_id, self.target_org, prefixed_repo_name),
+                    data=json.dumps(admin_permissions),
+                    headers={"Authorization": "Bearer {}".format(github_access_token)})
                 if (assign_response.status_code != 204):
                     failure_count += 1
                     self.log.warning("Failed to assign repository to team",
@@ -525,7 +472,11 @@ class RepoOps:
                                      status_code=assign_response.status_code)
                 else:
                     success_count += 1
-                    self.log.debug("Assigned repository to team", result="SUCCESS", repo_name=prefixed_repo_name, prefix=self.prefix, teamName=team)
+                    self.log.debug("Assigned repository to team",
+                                   result="SUCCESS",
+                                   repo_name=prefixed_repo_name,
+                                   prefix=self.prefix,
+                                   teamName=team)
             assign_result[team] = {'success': success_count, 'failure': failure_count}
             self.log.debug("Assigned repositories to team", teamName=team, success_count=success_count)
             if (failure_count != 0):
