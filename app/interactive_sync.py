@@ -7,10 +7,10 @@ from app import utils, cred_operations, repo_operations
 
 
 def start_session(bitbucket_account_id, bitbucket_access_token, github_account_id, github_access_token, bitbucket_api,
-                  github_api, console_log_level, console_log_normal, file_log_level):
+                  github_api, prefix, console_log_level, console_log_normal, file_log_level):
     # Objects for operations related to credentials and repository actions
     cred_ops = cred_operations.CredOps(bitbucket_api, github_api, console_log_level, console_log_normal, file_log_level)
-    repo_ops = repo_operations.RepoOps(bitbucket_api, github_api, console_log_level, console_log_normal, file_log_level)
+    repo_ops = repo_operations.RepoOps(bitbucket_api, github_api, prefix, console_log_level, console_log_normal, file_log_level)
     log = utils.LogUtils.get_logger(os.path.basename(__file__), console_log_level, console_log_normal, file_log_level)
     target_org = utils.ReadUtils.get_target_org()
     # Ask for migration destination
@@ -52,7 +52,7 @@ def start_session(bitbucket_account_id, bitbucket_access_token, github_account_i
         log.debug("NO REPOSITORIES SYNCED OR MIGRATED")
         exit(0)
     # Used later for team assignments
-    migration_repos = [{'name': repo['name']} for repo in processed_repos if ('github_link' not in repo)]
+    prefixed_migration_repos = [{'name': prefix+repo['name']} for repo in processed_repos if ('github_link' not in repo)]
 
     # Confirm to proceed with syncing and migration
     confirm_migrate = questionary.confirm('Proceed with syncing {} and migrating {} repos?'.format(
@@ -95,7 +95,7 @@ def start_session(bitbucket_account_id, bitbucket_access_token, github_account_i
     repo_assignment = {}
     for team in selected_teams:
         repos_for_teams = questionary.checkbox('Select the repos to assign to {} team'.format(team),
-                                               choices=migration_repos).ask()
+                                               choices=prefixed_migration_repos).ask()
         if (len(repos_for_teams) != 0):
             repo_assignment[team] = repos_for_teams
         else:

@@ -1,6 +1,17 @@
 # Organization to sync/migrate the repositories to
 target_org: ***REMOVED***
 
+# Add a prefix to identify the source of the repository (eg: BitBucket)
+
+# IMPORTANT: Always use the same prefix with the same source everytime you sync, (BitBucket is always bb:)
+#         otherwise, the script checks identifies the repos as 'not-existing' on GHE and makes new migrations
+#         instead of syncing old repos.
+
+# You can choose to make this an empty string as well, to maintain same repository names
+# IMPORTANT Only use alphabets, numbers, hyphen, underscore and fullstops.
+# GitHub converts any substring of other characters to a single hyphen. eg: ~!@123ABC_po%. becomes -123ABC_po-.
+prefix: "bb-"
+
 # Specify log levels for console and files
 console_log_level: info
 console_log_normal: false # false: JSON formatted logs, true: Normal oneline string logs

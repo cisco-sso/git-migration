@@ -11,9 +11,10 @@ from app import utils
 
 
 class RepoOps:
-    def __init__(self, bitbucket_api, github_api, console_log_level, console_log_normal, file_log_level):
+    def __init__(self, bitbucket_api, github_api, prefix, console_log_level, console_log_normal, file_log_level):
         self.bitbucket_api = bitbucket_api
         self.github_api = github_api
+        self.prefix = prefix
         self.log = utils.LogUtils.get_logger(os.path.basename(__file__), console_log_level, console_log_normal,
                                              file_log_level)
         self.target_org = utils.ReadUtils.get_target_org()
@@ -106,10 +107,12 @@ class RepoOps:
             repo_info["bitbucket_link"] = link[0]["href"]
             self.log.debug("Added repository details from BitBucket", repo_name=repo_name)
 
+            # Use prefixed repo names while checking for anything on GitHub
+            prefixed_repo_name = self.prefix + repo_name
             # Add GitHub Link
             if (push_to_org):
                 # Check if same repository already exists on GitHub target org
-                github_org_repo_check_link = self.github_api + "/repos/{}/{}".format(self.target_org, repo_name)
+                github_org_repo_check_link = self.github_api + "/repos/{}/{}".format(self.target_org, prefixed_repo_name)
                 github_org_repo_check = requests.get(github_org_repo_check_link,
                                                      headers={"Authorization": "Bearer {}".format(github_access_token)})
                 # Repository with a similar name already exists on GitHub
@@ -117,24 +120,27 @@ class RepoOps:
                     github_org_repo_check = json.loads(github_org_repo_check.text)
                     self.log.debug("Repository exists on organization",
                                    exists="YES",
-                                   repo_name=repo_name,
+                                   repo_name=prefixed_repo_name,
+                                   prefix=self.prefix,
                                    target_org=self.target_org)
                     repo_info["github_link"] = github_org_repo_check["clone_url"]
                 elif (github_org_repo_check.status_code != 404):  # Error
                     self.log.error("Failed to check for repository on github",
                                    result="FAILED",
-                                   repo_name=repo_name,
+                                   repo_name=prefixed_repo_name,
+                                   prefix=self.prefix,
                                    status_code=github_org_repo_check.status_code)
                     continue
                 else:  # 404 Not Found
                     new_repos += 1
                     self.log.debug("Repository does not exist on organization",
                                    exists="NO",
-                                   repo_name=repo_name,
+                                   repo_name=prefixed_repo_name,
+                                   prefix=self.prefix,
                                    target_org=self.target_org)
             else:
                 # Check if same repository already exists on GitHub
-                github_repo_check_link = self.github_api + "/repos/{}/{}".format(github_account_id, repo_name)
+                github_repo_check_link = self.github_api + "/repos/{}/{}".format(github_account_id, prefixed_repo_name)
                 github_repo_check = requests.get(github_repo_check_link,
                                                  headers={"Authorization": "Bearer {}".format(github_access_token)})
                 # Repository with a similar name already exists on GitHub
@@ -142,19 +148,22 @@ class RepoOps:
                     github_repo_check = json.loads(github_repo_check.text)
                     self.log.debug("Repository exists on GHE account",
                                    exists="YES",
-                                   repo_name=repo_name,
+                                   repo_name=prefixed_repo_name,
+                                   prefix=self.prefix,
                                    github_account_id=github_account_id)
                     repo_info["github_link"] = github_repo_check["clone_url"]
                 elif (github_repo_check.status_code != 404):  # Error
                     self.log.error("Failed to check for repository on github",
                                    result="FAILED",
-                                   repo_name=repo_name,
+                                   repo_name=prefixed_repo_name,
+                                   prefix=self.prefix,
                                    status_code=github_repo_check.status_code)
                 else:  # 404 Not Found
                     new_repos += 1
                     self.log.debug("Repository does no exist on GHE account",
                                    exists="NO",
-                                   repo_name=repo_name,
+                                   repo_name=prefixed_repo_name,
+                                   prefix=self.prefix,
                                    github_account_id=github_account_id)
             processed_repos.append(repo_info)
         total_repos = len(processed_repos)
@@ -168,8 +177,9 @@ class RepoOps:
     def make_new_repo(self, push_to_org, repo, github_account_id, github_access_token):
         # API call to make new remote repo on GitHub
         repo_name = repo["name"]
+        prefixed_repo_name = self.prefix + repo_name
 
-        request_payload = {"name": utils.StringUtils.remove_control_characters(repo_name), "private": True}
+        request_payload = {"name": utils.StringUtils.remove_control_characters(prefixed_repo_name), "private": True}
         if ("description" in repo):
             request_payload["description"] = utils.StringUtils.remove_control_characters(repo["description"])
 
@@ -181,12 +191,14 @@ class RepoOps:
             if (git_response.status_code != 201):
                 self.log.error("Failed to create new repository on organization",
                                result="FAILED",
-                               repo_name=repo_name,
+                               repo_name=prefixed_repo_name,
+                               prefix=self.prefix,
                                target_org=self.target_org)
                 return None
             self.log.debug("New repository created on GitHub organization",
                            result="SUCCESS",
-                           repo_name=repo_name,
+                           repo_name=prefixed_repo_name,
+                           prefix=self.prefix,
                            target_org=self.target_org)
         else:
             # Create new repo of same name on GitHub Account
@@ -196,12 +208,14 @@ class RepoOps:
             if (git_response.status_code != 201):
                 self.log.error("Failed to create new repository on personal account",
                                result="FAILED",
-                               repo_name=repo_name,
+                               repo_name=prefixed_repo_name,
+                               prefix=self.prefix,
                                github_account_id=github_account_id)
                 return None
             self.log.debug("New repository created on GitHub account",
                            result="SUCCESS",
-                           repo_name=repo_name,
+                           repo_name=prefixed_repo_name,
+                           prefix=self.prefix,
                            github_account_id=github_account_id)
 
         github_repo_data = json.loads(git_response.text)
@@ -223,13 +237,14 @@ class RepoOps:
 
         for repo in repositories:
             repo_name = repo['name']
+            prefixed_repo_name = self.prefix + repo_name
             if ('github_link' in repo):
                 # github_link = repo['github_link']
                 pass
             else:
                 github_link = self.make_new_repo(push_to_org, repo, github_account_id, github_access_token)
                 if (github_link is None):
-                    self.log.error("Failed to make new repository", result="FAILED", repo_name=repo_name)
+                    self.log.error("Failed to make new repository", result="FAILED", repo_name=prefixed_repo_name)
                     continue
                 repo['github_link'] = github_link
             bitbucket_link = repo['bitbucket_link']
@@ -246,19 +261,21 @@ class RepoOps:
                                                         bitbucket_link_domain))
                     self.log.debug("Cloned repository", result="SUCCESS", repo_name=repo_name)
                 except ErrorReturnCode as e:
-                    self.log.error("Failed to cloen repository",
+                    self.log.error("Failed to clone repository",
                                    result="FAILED",
                                    repo_name=repo_name,
                                    exit_code=e.exit_code)
                     continue
 
             os.chdir(repo_name)  # IMPORTANT DO NOT DELETE
+            # Sync all tags individually
             tags_sync_success, all_tags, failed_tags = self.sync_tags(repo, github_account_id, github_access_token)
             if (not tags_sync_success):
                 self.log.warning("Failed to sync tags for repository",
                                  result="FAILED",
                                  repo_name=repo_name,
                                  failed_tags=failed_tags)
+            # Sync all branches individually
             branches_sync_success, all_branches, failed_branches = self.sync_branches(
                 repo, github_account_id, github_access_token)
             if (not branches_sync_success):
@@ -268,12 +285,13 @@ class RepoOps:
                                  failed_branches=failed_branches)
 
             if (tags_sync_success and branches_sync_success):
-                self.log.debug("Successfully synced all tags and branches for repository", repo_name=repo_name)
+                self.log.debug("Successfully synced all tags and branches for repository", result="SUCCESS", repo_name=repo_name)
             os.chdir("..")  # IMPORTANT DO NOT DELETE
 
     def sync_tags(self, repo, github_account_id, github_access_token):
         # Everytime, tags are fetched from remote (bitbucket) and then pushed to github
         repo_name = repo['name']
+        prefixed_repo_name = self.prefix + repo_name
         github_link = repo['github_link']
         github_link_domain = github_link.split("//")[1]
         bitbucket_link = repo['bitbucket_link']
@@ -309,7 +327,7 @@ class RepoOps:
 
         # Set origin to github
         git.remote('set-url', 'origin', github_link)
-        self.log.debug("Syncing tags. Set origin to Github", repo_name=repo_name, github_link=github_link)
+        self.log.debug("Syncing tags. Set origin to Github", repo_name=prefixed_repo_name, prefix=self.prefix, github_link=github_link)
 
         # Push each tag individually, log error if any fails and continue to next tag
         for tag_name in tags:
@@ -317,12 +335,13 @@ class RepoOps:
             try:
                 git.push('https://{}:{}@{}'.format(github_account_id, github_access_token, github_link_domain),
                          tag_name)
-                self.log.debug("Pushed tag for repository", result="SUCCESS", repo_name=repo_name, tag_name=tag_name)
+                self.log.debug("Pushed tag for repository", result="SUCCESS", repo_name=prefixed_repo_name, prefix=self.prefix, tag_name=tag_name)
                 success_tags.append(tag_name)
             except ErrorReturnCode as e:
                 self.log.error("Failed to push tag to github",
                                result="FAILED",
-                               repo_name=repo_name,
+                               repo_name=prefixed_repo_name,
+                               prefix=self.prefix,
                                tag_name=tag_name,
                                exit_code=e.exit_code,
                                stderr=e.stderr)
@@ -334,6 +353,7 @@ class RepoOps:
 
     def sync_branches(self, repo, github_account_id, github_access_token):
         repo_name = repo['name']
+        prefixed_repo_name = self.prefix + repo_name
         github_link = repo['github_link']
         bitbucket_link = repo['bitbucket_link']
         github_link_domain = github_link.split("//")[1]
@@ -419,20 +439,22 @@ class RepoOps:
             # Push changes to origin (github)
             # Set origin to github
             git.remote('set-url', 'origin', github_link)
-            self.log.debug("Syncing branches. Set origin to Github", repo_name=repo_name, github_link=github_link)
+            self.log.debug("Syncing branches. Set origin to Github", repo_name=prefixed_repo_name, prefix=self.prefix, github_link=github_link)
             # Push changes to origin
             try:
-                self.log.info("Pushing branch for repository", repo_name=repo_name, branch_name=branch_name)
+                self.log.info("Pushing branch for repository", repo_name=prefixed_repo_name, prefix=self.prefix, branch_name=branch_name)
                 git.push('https://{}:{}@{}'.format(github_account_id, github_access_token, github_link_domain),
                          branch_name)
                 self.log.debug("Pushed changes to origin branch",
                                result="SUCCESS",
-                               repo_name=repo_name,
+                               repo_name=prefixed_repo_name,
+                               prefix=self.prefix,
                                branch_name=branch_name)
             except ErrorReturnCode as e:
                 self.log.error("Failed to push changes to origin branch",
                                result="FAILED",
-                               repo_name=repo_name,
+                               repo_name=prefixed_repo_name,
+                               prefix=self.prefix,
                                branch_name=branch_name,
                                exit_code=e.exit_code,
                                stderr=e.stderr)
@@ -442,7 +464,8 @@ class RepoOps:
             success_branches.append(branch_name)
             self.log.debug("Successfully synced branch for repository",
                            result="SUCCESS",
-                           repo_name=repo_name,
+                           repo_name=prefixed_repo_name,
+                           prefix=self.prefix,
                            branch_name=branch_name)
 
             # Set origin back to bitbucket so the next branch can pull changes
@@ -451,7 +474,7 @@ class RepoOps:
                            repo_name=repo_name,
                            bitbucket_link=bitbucket_link)
 
-        all_remote_branches = [branch_name.lstrip('origin/') for branch_name in remote_branches]
+        all_remote_branches = [branch_name.split('origin/')[1] for branch_name in remote_branches]
         branches_sync_success = set(all_remote_branches) == set(success_branches)
         return branches_sync_success, all_remote_branches, failed_branches
 
@@ -470,7 +493,7 @@ class RepoOps:
     def assign_repos_to_teams(self, repo_assignment, github_access_token):
         admin_permissions = {'permission': 'admin'}
         assign_result = {}
-        for team, repos in repo_assignment.items():  # key, value :: team, repos
+        for team, prefixed_repos in repo_assignment.items():  # key, value :: team, repos
             self.log.info("Assigning repos to team", teamName=team)
 
             # Get Team's ID
@@ -486,22 +509,23 @@ class RepoOps:
 
             success_count = 0
             failure_count = 0
-            for repo in repos:
+            for prefixed_repo_name in prefixed_repos:
                 # Assign repo to team
                 assign_response = requests.put(self.github_api +
-                                               "/teams/{}/repos/{}/{}".format(team_id, self.target_org, repo),
+                                               "/teams/{}/repos/{}/{}".format(team_id, self.target_org, prefixed_repo_name),
                                                data=json.dumps(admin_permissions),
                                                headers={"Authorization": "Bearer {}".format(github_access_token)})
                 if (assign_response.status_code != 204):
                     failure_count += 1
                     self.log.warning("Failed to assign repository to team",
                                      result="FAILED",
-                                     repo_name=repo,
+                                     repo_name=prefixed_repo_name,
+                                     prefix=self.prefix,
                                      teamName=team,
                                      status_code=assign_response.status_code)
                 else:
                     success_count += 1
-                    self.log.debug("Assigned repository to team", result="SUCCESS", repo_name=repo, teamName=team)
+                    self.log.debug("Assigned repository to team", result="SUCCESS", repo_name=prefixed_repo_name, prefix=self.prefix, teamName=team)
             assign_result[team] = {'success': success_count, 'failure': failure_count}
             self.log.debug("Assigned repositories to team", teamName=team, success_count=success_count)
             if (failure_count != 0):

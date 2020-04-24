@@ -30,7 +30,14 @@ class ReadUtils():
         with open(cur_dir_path + "/config.yml") as file:
             target_org = yaml.load(file, Loader=yaml.FullLoader)['target_org']
         return target_org
-
+    
+    # Read and return the prefix to be used for repo migrations and sync
+    @staticmethod
+    def get_prefix():
+        cur_dir_path = os.getcwd()
+        with open(cur_dir_path + "/config.yml") as file:
+            prefix = yaml.load(file, Loader=yaml.FullLoader)['prefix']
+        return prefix
 
 class RegexUtils():
     @staticmethod

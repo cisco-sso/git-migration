@@ -31,7 +31,7 @@ def is_interactive():
               type=str,
               help="GitHub API Base URL")
 # For the following options, ensure that 'interactive' mode prompts the user
-#   for missing settings, and 'auto' mode does not prom pt user and instead
+#   for missing settings, and 'auto' mode does not prompt user and instead
 #   shows help usage.
 @click.option('--bitbucket-account-id',
               prompt=not is_help_called() and is_interactive(),
@@ -61,9 +61,17 @@ def is_interactive():
               show_default='env GIT_MIGRATION_GITHUB_ACCESS_TOKEN',
               type=str,
               help="GitHub Access Token")
+@click.option('--prefix',
+              prompt=not is_help_called() and is_interactive(),
+              required=not is_help_called() and not is_interactive(),
+              default=utils.ReadUtils.get_prefix(),
+              show_default=utils.ReadUtils.get_prefix(),
+              type=str,
+              help="Prefix for repository names"
+)
 @app_cli.pass_context
 def cli(ctx, bitbucket_url, github_url, bitbucket_account_id, bitbucket_access_token, github_account_id,
-        github_access_token):
+        github_access_token, prefix):
     """Sync Bitbucket and GitHub repositories"""
     ctx.bitbucket_api = bitbucket_url
     ctx.github_api = github_url
@@ -71,7 +79,7 @@ def cli(ctx, bitbucket_url, github_url, bitbucket_account_id, bitbucket_access_t
     ctx.bitbucket_access_token = bitbucket_access_token
     ctx.github_account_id = github_account_id
     ctx.github_access_token = github_access_token
-
+    ctx.prefix = prefix
 
 @cli.command()
 @click.option('--run-once', is_flag=True, help="Syncs the repositories once")
@@ -87,7 +95,7 @@ def auto(ctx, run_once, personal_account, block_new_migrations):
     push_to_org = not personal_account
     cred_ops = cred_operations.CredOps(ctx.bitbucket_api, ctx.github_api, ctx.console_log_level, ctx.console_log_normal,
                                        ctx.file_log_level)
-    repo_ops = repo_operations.RepoOps(ctx.bitbucket_api, ctx.github_api, ctx.console_log_level, ctx.console_log_normal,
+    repo_ops = repo_operations.RepoOps(ctx.bitbucket_api, ctx.github_api, ctx.prefix, ctx.console_log_level, ctx.console_log_normal,
                                        ctx.file_log_level)
 
     # Check if credentials are right and can push to the chosen destination
@@ -129,5 +137,5 @@ def interactive(ctx):
     """Select the projects and repositories to migrate/sync"""
     # Use ctx.log.info("message") to log
     interactive_sync.start_session(ctx.bitbucket_account_id, ctx.bitbucket_access_token, ctx.github_account_id,
-                                   ctx.github_access_token, ctx.bitbucket_api, ctx.github_api, ctx.console_log_level,
+                                   ctx.github_access_token, ctx.bitbucket_api, ctx.github_api, ctx.prefix, ctx.console_log_level,
                                    ctx.console_log_normal, ctx.file_log_level)
