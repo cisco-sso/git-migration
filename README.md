@@ -182,6 +182,10 @@ The `regex` setting defined at any level is propogated to all it's children and 
 
 
 
+You can move the repository from one team to another in between running the sync and the new team will also have access to the repository. **But, the old team will not be removed from the access list.**
+
+
+
 IMPORTANT:
 
 - The `include.regex` and `exclude.regex` do NOT affect each other and are not inherited.
