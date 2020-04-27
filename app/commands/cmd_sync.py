@@ -67,7 +67,7 @@ def is_interactive():
               default=utils.ReadUtils.get_prefix(),
               show_default=utils.ReadUtils.get_prefix(),
               type=str,
-              help="Prefix for repository names")
+              help="Prefix to be added to the names of sync'd repositories at destination")
 @app_cli.pass_context
 def cli(ctx, bitbucket_url, github_url, bitbucket_account_id, bitbucket_access_token, github_account_id,
         github_access_token, prefix):

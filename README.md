@@ -93,3 +93,97 @@ If needed to just migrate a handful repositories from a project on BitBucket.
 
 ------
 
+
+
+## Config file
+
+While most of the config file is self explanatory, the format for sync_config adheres to the following format:
+
+
+
+There are 2 main keys, `include` and `exclude`. These together control which repositories are selected for sync.
+
+```yaml
+sync_config:
+	include:
+		# config for repositories to include
+	exclude:
+		# config for repositories to exclude
+```
+
+
+
+Within these keys, you can specify the projects from which to pull repositories and also assign the repositories to some teams on GitHub Enterprise after migration. You can include the same repository under multiple names too.
+
+
+
+You can choose to exclude the repositories from the sync/migration too. **Exclusion takes precedence over inclusion** therefore, if there is a repository mentioned in both include and exclude, it won't be considered for syncing.
+
+```yaml
+sync_config:
+	include:
+		# config for repositories to include
+		project-key-1:
+			- repo-name-1 # These repositories not assigned to any team
+			- repo-name-two # after being migrated over to GitHub Enterprise
+			- team-name-alpha:
+				- repo-name-3
+				- repo-name-4
+			- team-name-beta:
+				- repo-name-4
+				- repo-name-two # This repo shall be assigned to team-beta as it is mentioned again
+				- repo-name-5
+		project-key-2:
+			- repo-name-35
+			- team-name-sharks:
+				- repo-name-27
+	exclude:
+		# config for repositories to exclude
+		project-key-1:
+			- repo-name-5
+		project-key-2:
+			- repo-name-something
+```
+
+
+
+By default, these names are taken and matched as they are to filter out repository names. If preferable, you can choose to use regular expressions too!
+
+You can specify that matching should occur with regex matching instead of normal string matching at any level in the `sync_config` tree with the additional `regex` key. Just make sure that if a `regex` key is mentioned, move the rest of the config of that level under a separate `repo_config` key.
+
+```yaml
+sync_config:
+  include:
+    regex: true
+    repo_config:
+      project-key-1: # project name
+        regex: false # Override the parent attribute by redefining as false for this project
+        repo_config:
+          - repo-name-1
+          - team-name-alpha: # team name
+              regex: true # Override the project setting by mentioning for this team
+              repo_config:
+                - ***REMOVED*** # The regex pattern to match
+      project-key-2: # project name, derives regex matching as true from parent include
+        - team-name-alpha: # team name
+            - ***REMOVED*** # 
+  exclude:
+    regex: true # Works for exclude as well
+    repo_config:
+      ***REMOVED***: # regex matching attribute for these are inherited from the parent
+        - ***REMOVED***
+      ***REMOVED***: # this too is regex matched
+        - some-regex-pattern
+```
+
+
+
+The `regex` setting defined at any level is propogated to all it's children and this can be overriden within any level in the `sync_config` tree.
+
+
+
+IMPORTANT:
+
+- The `include.regex` and `exclude.regex` do NOT affect each other and are not inherited.
+- Do NOT mention a `sync_config.regex`. Support for that is NOT added.
+- By deafult, regex is FALSE.
