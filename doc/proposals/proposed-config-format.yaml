@@ -1,0 +1,77 @@
+integrations:
+
+- name: ***REMOVED***-bb1-to-gh3
+  enabled: true
+  sync:
+    type: loop
+    period_seconds: 600
+  source:
+    type: bitbucket
+    base_url: https://***REMOVED***
+    # `org` format varies depending on type: Bitbucket or Github
+    #   Bitbucket supports `project/<name>` and `user/<name>`
+    #   Github supports `org/<name>` and `user/<name>`
+    org: project/***REMOVED***
+    repos:
+      # List of filters to be evaluated in order.  Order matters
+      #   Regexes implied by leading and trailing `/`
+      filters:
+      - include: ***REMOVED***
+      - include: /^.*-***REMOVED***$/
+      - exclude: ***REMOVED***
+      - exclude: /***REMOVED***/
+  target:
+    type: github-enterprise
+    base_url: https://***REMOVED***
+    org: ***REMOVED***
+    # branch_modifiers allow you to rewrite target repo names
+    #   By default, empty branch_modifies sync exactly the same branch names from source to target
+    branch_modifiers:
+    - name: master-branch-only
+      # match can accept regex implied by leading and trailing `/`
+      match: master
+      prefix: bb-
+  # Example:
+  # - name: all-branches
+  #   match: /.*/
+  #   prefix: bb-
+  # Example:
+  # - name: all-branches-except-master
+  #   match: /^(?!master).*/
+  #   prefix: bb-
+
+- name: personal-***REMOVED***-bb-to-gh3
+  enabled: false
+  sync:
+    type: once
+    period_seconds: 0
+  source:
+    type: bitbucket
+    base_url: https://***REMOVED***
+    org: user/***REMOVED***
+    repos:
+      filters:
+      - include: /.*/
+  target:
+    type: github-enterprise
+    base_url: https://***REMOVED***
+    org: ***REMOVED***
+    branch_modifiers: []
+
+- name: ***REMOVED***sso-github.com-to-gh3
+  enabled: true
+  sync:
+    type: loop
+    period_seconds: 600
+  source:
+    type: github-public
+    base_url: https://www.github.com
+    org: ***REMOVED***
+    repos:
+      filters:
+      - include: /.*/
+  target:
+    type: github-enterprise
+    base_url: https://***REMOVED***
+    org: ***REMOVED***
+    branch_modifiers: []
