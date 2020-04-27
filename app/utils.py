@@ -13,14 +13,15 @@ from structlog._frames import _find_first_app_frame_and_name
 
 
 class ReadUtils():
+
     # Read and return projects to sync and repos to exculde from sync
     @staticmethod
     def get_sync_config():
         cur_dir_path = os.getcwd()
         with open(cur_dir_path + "/config.yml") as file:
             sync_config = yaml.load(file, Loader=yaml.FullLoader)['sync_config']
-        to_include = sync_config['include']
-        to_exclude = sync_config['exclude']
+        to_include = sync_config['include'] if ('include' in sync_config) else None
+        to_exclude = sync_config['exclude'] if ('exclude' in sync_config) else None
         return to_include, to_exclude
 
     # Read and return the target organization to sync repositories to
@@ -54,6 +55,28 @@ class RegexUtils():
             result_repos += result
         result_repos = sorted(list(set(result_repos)))
         return result_repos
+
+    @staticmethod
+    def filter_repo_dicts(repositories, regex_list, exclude_matches=False):
+        if (not regex_list):
+            return repositories
+        result_repos = []
+        for pattern in regex_list:
+            if (exclude_matches):
+                result = [repo for repo in repositories if not re.match(pattern, repo["name"])]
+            else:
+                result = [repo for repo in repositories if re.match(pattern, repo["name"])]
+            result_repos += result
+
+        # removing duplicate dicts
+        seen = set()
+        non_duplicate_repos = []
+        for repo in result_repos:
+            repo_name = repo["name"]
+            if repo_name not in seen:
+                seen.add(repo_name)
+                non_duplicate_repos.append(repo)
+        return non_duplicate_repos
 
 
 class MiscUtils():

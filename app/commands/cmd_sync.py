@@ -88,7 +88,7 @@ def cli(ctx, bitbucket_url, github_url, bitbucket_account_id, bitbucket_access_t
               is_flag=True,
               help="Block new migrations and sync only existing repos on GitHub")
 @app_cli.pass_context
-# By default, run in a loop at time intervals - TBD
+# TODO By default run in a loop after fixed time intervals
 def auto(ctx, run_once, personal_account, block_new_migrations):
     """Automatically sync all according to config file"""
     # Use ctx.log.info("message") to log
@@ -105,31 +105,34 @@ def auto(ctx, run_once, personal_account, block_new_migrations):
         exit(0)
 
     to_include, to_exclude = utils.ReadUtils.get_sync_config()
-    for project_key in to_include:
+
+    if to_include is None:
+        ctx.log.warning("Nothing to include")
+        exit(0)
+    include_config = to_include["repo_config"] if ("repo_config" in to_include) else to_include
+
+    for project_key in include_config:
         # Check credentials for given project
         bitbucket_pull_check = cred_ops.check_bitbucket_pull_creds(project_key, ctx.bitbucket_access_token)
         if (not bitbucket_pull_check):
             exit(1)
-        include_regex_list = to_include[project_key]
-        exclude_regex_list = to_exclude[project_key]
+
         repo_names = repo_ops.get_bitbucket_repos(project_key, ctx.bitbucket_access_token)
-        # Filter repositories based on config file regex patterns
-        repo_names = utils.RegexUtils.filter_repos(repo_names, include_regex_list)
-        repo_names = utils.RegexUtils.filter_repos(repo_names, exclude_regex_list, exclude_matches=True)
-        # Process and obtain metadata, links and details about repos
-        processed_repos, total_repos, new_repos = repo_ops.process_repos(project_key, repo_names, push_to_org,
+        repositories = repo_ops.populate_team_info(project_key, repo_names, to_include, to_exclude,
+                                                   ctx.github_access_token)
+        if not repositories:
+            continue
+        processed_repos, total_repos, new_repos = repo_ops.process_repos(project_key, repositories, push_to_org,
                                                                          ctx.bitbucket_access_token,
                                                                          ctx.github_account_id, ctx.github_access_token)
         # Sync only the repos that already exist on GitHub
         if (block_new_migrations):
             processed_repos = [repo for repo in processed_repos if ('github_link' in repo)]
+
         # Put an exit(0) just before this for testing other functionality without syncing
         # Sync the filtered repositories repositories
         repo_ops.sync_repos(push_to_org, processed_repos, ctx.bitbucket_account_id, ctx.bitbucket_access_token,
                             ctx.github_account_id, ctx.github_access_token)
-
-        # TODO (***REMOVED***): still need to assign repos to teams
-        #   AND this needs to be reflected in the configuration file.
 
 
 @cli.command()

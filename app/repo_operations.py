@@ -76,6 +76,135 @@ class RepoOps:
             repo_names += [repo["name"] for repo in project_repos["values"]]
         return repo_names
 
+    # Returns a list of repo objects with information regarding which teams they need to be assigned to
+    def populate_team_info(self, project_key, bitbucket_repo_names, to_include, to_exclude, github_access_token):
+        repositories = []
+
+        # First make a mapping of which repos are assigned to which teams (can be multiple teams)
+        # Then transform to a list of repos and return
+        repository_team_mapping = {}
+
+        # To verify if the teams mentioned in the config files actually exist on the org
+        teams_list = self.get_teams_info(github_access_token)
+        teams_list = [team['slug'] for team in teams_list]
+
+        # If include is not mentioned in config file
+        if to_include is None:
+            self.log.warning("Nothing to include", project_key=project_key)
+            return repositories
+
+        # Boolean to use/not-use regex matching for repository names
+        include_regex = to_include["regex"] if ("regex" in to_include) else False
+        include_config = to_include["repo_config"] if ("repo_config" in to_include) else to_include
+
+        # config for repositories to include from the current project
+        project_include_config = include_config[project_key] if (project_key in include_config) else []
+        if not project_include_config:
+            self.log.warning("Nothing to include", project_key=project_key)
+            return repositories
+
+        # Boolean to use/not-use regex matching for repository names in this project
+        project_regex = project_include_config["regex"] if ("regex" in project_include_config) else include_regex
+        project_include_config = project_include_config["repo_config"] if (
+            "repo_config" in project_include_config) else project_include_config
+        for repo_or_team in project_include_config:
+            if isinstance(repo_or_team, str):  # Repository name
+                if (not project_regex):
+                    # No regex matching for repository names, exact match
+                    # Add START (^) and END ($) regex symbols and use regex itself instead of string matching
+                    repo_name_regex = f"^{repo_or_team}$"
+                    filtered_repo_list = utils.RegexUtils.filter_repos(bitbucket_repo_names, [repo_name_regex])
+                    if (filtered_repo_list and (repo_or_team not in repository_team_mapping)):
+                        repository_team_mapping[repo_or_team] = []
+                    else:
+                        self.log.error("Could not find the repository mentioned in config file",
+                                       repo_name=repo_or_team,
+                                       project_key=project_key)
+                        self.log.warning("Skipping repository. Recheck name and project",
+                                         repo_name=repo_or_team,
+                                         project_key=project_key)
+                else:
+                    # Regex matching of repository names
+                    repo_names = utils.RegexUtils.filter_repos(bitbucket_repo_names, [repo_or_team])
+                    for repo_name in repo_names:
+                        if (repo_name not in repository_team_mapping):
+                            repository_team_mapping[repo_name] = []
+            elif isinstance(repo_or_team, dict):  # Team assignment
+                # Create a mapping of repo_names and their assigned teams (can be multiple teams)
+                for team_name, team_config in repo_or_team.items():
+
+                    # Boolean to use/not-use regex matching for repository names in this team
+                    team_regex = team_config["regex"] if ("regex" in team_config) else project_regex
+                    team_config = team_config["repo_config"] if ("repo_config" in team_config) else team_config
+
+                    repo_names = team_config
+
+                    # Assign to the mentioned team only if the team with the name exists on the org
+                    team_found = True
+                    if (team_name not in teams_list):
+                        self.log.error("Could not find team mentioned in config file", team_name=team_name)
+                        team_found = False
+
+                    if (not team_regex):
+                        # No regex matching for repository names, exact match
+                        for repo_name in repo_names:
+                            # Add START (^) and END ($) regex symbols and use regex itself instead of string matching
+                            repo_name_regex = f"^{repo_name}$"
+                            filtered_repo_list = utils.RegexUtils.filter_repos(bitbucket_repo_names, [repo_name_regex])
+                            if (filtered_repo_list and (repo_name not in repository_team_mapping)):
+                                repository_team_mapping[repo_name] = [team_name] if team_found else []
+                            elif (filtered_repo_list):
+                                repository_team_mapping[repo_name] += [team_name] if team_found else []
+                            else:
+                                self.log.error("Could not find the repository mentioned in config file",
+                                               repo_name=repo_or_team,
+                                               project_key=project_key)
+                                self.log.warning("Skipping repository. Recheck name and project",
+                                                 repo_name=repo_or_team,
+                                                 project_key=project_key)
+                    else:
+                        # Regex matching of repository names
+                        repos_to_assign = utils.RegexUtils.filter_repos(bitbucket_repo_names, repo_names)
+                        for repo_name in repos_to_assign:
+                            if (repo_name not in repository_team_mapping):
+                                repository_team_mapping[repo_name] = [team_name] if team_found else []
+                            else:
+                                repository_team_mapping[repo_name] += [team_name] if team_found else []
+            else:
+                continue
+        # Convert mapping to objects containing info about each repo
+        for repo_name, team_names in repository_team_mapping.items():
+            if (team_names):
+                repositories.append({"name": repo_name, "teams": team_names})
+            else:
+                repositories.append({"name": repo_name})
+
+        # If exclude is not mentioned in config file
+        if (to_exclude is None):
+            self.log.debug("Nothing to exclude", project_key=project_key)
+            return repositories
+
+        # Boolean to use/not-use regex matching for repository names
+        exclude_regex = to_exclude["regex"] if ("regex" in to_exclude) else False
+        exclude_config = to_exclude["repo_config"] if ("repo_config" in to_exclude) else to_exclude
+        project_exclude_config = exclude_config[project_key] if (project_key in exclude_config) else []
+
+        if not project_exclude_config:
+            self.log.debug("Nothing to exclude", project_key=project_key)
+            return repositories
+
+        # Boolean to use/not-use regex matching for repository names for this project
+        project_exclude_regex = project_exclude_config["regex"] if (
+            "regex" in project_exclude_config) else exclude_regex
+        project_exclude_config = project_exclude_config["repo_config"] if (
+            "repo_config" in project_exclude_config) else project_exclude_config
+
+        if (not project_exclude_regex):  # No regex matching for excluding repo names
+            # Add START (^) and END ($) regex symbols and use regex itself instead of string matching
+            project_exclude_config = [f"^{repo_name}$" for repo_name in project_exclude_config]
+        repositories = utils.RegexUtils.filter_repo_dicts(repositories, project_exclude_config, exclude_matches=True)
+        return repositories
+
     # Process the list of repositories for a project and return metadata and repository links
     def process_repos(self, project_key, repositories, push_to_org, bitbucket_access_token, github_account_id,
                       github_access_token):
@@ -83,9 +212,16 @@ class RepoOps:
         new_repos = 0
         self.log.info("Processing repos from project", project_key=project_key)
 
-        for repo_name in repositories:
-            # Add name
-            repo_info = {"name": repo_name}
+        for repo in repositories:
+
+            if isinstance(repo, str):  # repositories is a list of repository names
+                # Add name
+                repo_name = repo
+                repo_info = {"name": repo_name}
+            else:  # repositories is a list of repository dicts
+                repo_name = repo["name"]
+                repo_info = repo
+
             bitbucket_repo_response = requests.get(
                 self.bitbucket_api + "/projects/{}/repos/{}".format(project_key, repo_name),
                 headers={"Authorization": "Bearer {}".format(bitbucket_access_token)})
@@ -239,8 +375,9 @@ class RepoOps:
         for repo in repositories:
             repo_name = repo['name']
             prefixed_repo_name = self.prefix + repo_name
+            teams_to_assign = repo["teams"] if ("teams" in repo) else []
             if ('github_link' in repo):
-                # github_link = repo['github_link']
+                github_link = repo['github_link']
                 pass
             else:
                 github_link = self.make_new_repo(push_to_org, repo, github_account_id, github_access_token)
@@ -289,6 +426,12 @@ class RepoOps:
                 self.log.debug("Successfully synced all tags and branches for repository",
                                result="SUCCESS",
                                repo_name=repo_name)
+            # Assign repo to teams, reuse existing function assign_repos_to_teams()
+            if (push_to_org and github_link and teams_to_assign):
+                repo_assignment = {}
+                for team_name in teams_to_assign:
+                    repo_assignment[team_name] = [prefixed_repo_name]
+                self.assign_repos_to_teams(repo_assignment, github_access_token)
             os.chdir("..")  # IMPORTANT DO NOT DELETE
 
     def sync_tags(self, repo, github_account_id, github_access_token):
@@ -464,12 +607,12 @@ class RepoOps:
                     headers={"Authorization": "Bearer {}".format(github_access_token)})
                 if (assign_response.status_code != 204):
                     failure_count += 1
-                    self.log.warning("Failed to assign repository to team",
-                                     result="FAILED",
-                                     repo_name=prefixed_repo_name,
-                                     prefix=self.prefix,
-                                     teamName=team,
-                                     status_code=assign_response.status_code)
+                    self.log.error("Failed to assign repository to team",
+                                   result="FAILED",
+                                   repo_name=prefixed_repo_name,
+                                   prefix=self.prefix,
+                                   teamName=team,
+                                   status_code=assign_response.status_code)
                 else:
                     success_count += 1
                     self.log.debug("Assigned repository to team",
