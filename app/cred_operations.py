@@ -15,9 +15,9 @@ class CredOps:
     # Check if BitBucket access tokens are valid and can access the specified project
     def check_bitbucket_pull_creds(self, project_key, bitbucket_access_token):
         # Check BitBucket Access Token
-        bitbucket_access_check_link = self.bitbucket_api + "/projects/{}/repos".format(project_key)
+        bitbucket_access_check_link = self.bitbucket_api + f"/projects/{project_key}/repos"
         bitbucket_access_check = requests.get(bitbucket_access_check_link,
-                                              headers={"Authorization": "Bearer {}".format(bitbucket_access_token)})
+                                              headers={"Authorization": f"Bearer {bitbucket_access_token}"})
         if (bitbucket_access_check.status_code == 200):
             self.log.debug("BitBucket credentials check", result="PASSED")
             return True
@@ -42,7 +42,7 @@ class CredOps:
         # Check GitHub Access Token
         github_access_token_check_link = self.github_api + "/user/repos"
         github_access_token_check = requests.get(github_access_token_check_link,
-                                                 headers={"Authorization": "Bearer {}".format(github_access_token)})
+                                                 headers={"Authorization": f"Bearer {github_access_token}"})
         if (github_access_token_check.status_code == 200):
             self.log.debug("GitHub credentials check", result="PASSED")
             return True
@@ -62,8 +62,8 @@ class CredOps:
         if (push_to_org):
             self.log.info("Checking credentials for push to organization", target_org=self.target_org)
 
-            is_member = requests.get(self.github_api + "/orgs/{}/members/{}".format(self.target_org, github_account_id),
-                                     headers={"Authorization": "Bearer {}".format(github_access_token)})
+            is_member = requests.get(self.github_api + f"/orgs/{self.target_org}/members/{github_account_id}",
+                                     headers={"Authorization": f"Bearer {github_access_token}"})
             # API returns 401 if the user's access token is incorrect
             if (is_member.status_code == 401):
                 self.log.error("GitHub Access Token check: Unauthorized",
@@ -87,9 +87,9 @@ class CredOps:
         else:
             self.log.info("Checking credentials for push", push_destination=github_account_id)
             # Check GitHub Access Token
-            github_access_token_check_link = self.github_api + "/users/{}/repos".format(github_account_id)
+            github_access_token_check_link = self.github_api + f"/users/{github_account_id}/repos"
             github_access_token_check = requests.get(github_access_token_check_link,
-                                                     headers={"Authorization": "Bearer {}".format(github_access_token)})
+                                                     headers={"Authorization": f"Bearer {github_access_token}"})
             if (github_access_token_check.status_code == 401):
                 self.log.error("GitHub Access Token check: Unauthorized",
                                result="FAILED",

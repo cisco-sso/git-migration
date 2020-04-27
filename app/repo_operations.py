@@ -27,8 +27,8 @@ class RepoOps:
         # Get list of projects
         self.log.info("Fetching project list")
         while (not is_last_page):
-            projects_url = self.bitbucket_api + "/projects/?start={}".format(start)
-            projects = requests.get(projects_url, headers={"Authorization": "Bearer {}".format(bitbucket_access_token)})
+            projects_url = self.bitbucket_api + f"/projects/?start={start}"
+            projects = requests.get(projects_url, headers={"Authorization": f"Bearer {bitbucket_access_token}"})
             if (projects.status_code == 200):
                 self.log.debug("Fetched project list", result="SUCCESS")
                 projects = json.loads(projects.text)
@@ -54,9 +54,9 @@ class RepoOps:
         self.log.info("Fetching repository list", project_key=project_key)
         while (not is_last_page):
             # Get list of repos under the mentioned project on BitBucket
-            project_repos_link = self.bitbucket_api + "/projects/{}/repos?start={}".format(project_key, start)
+            project_repos_link = self.bitbucket_api + f"/projects/{project_key}/repos?start={start}"
             project_repos = requests.get(project_repos_link,
-                                         headers={"Authorization": "Bearer {}".format(bitbucket_access_token)})
+                                         headers={"Authorization": f"Bearer {bitbucket_access_token}"})
             # Error while fetching repos
             if (project_repos.status_code != 200):
                 self.log.error("Failed to fetch repository list",
@@ -222,9 +222,8 @@ class RepoOps:
                 repo_name = repo["name"]
                 repo_info = repo
 
-            bitbucket_repo_response = requests.get(
-                self.bitbucket_api + "/projects/{}/repos/{}".format(project_key, repo_name),
-                headers={"Authorization": "Bearer {}".format(bitbucket_access_token)})
+            bitbucket_repo_response = requests.get(self.bitbucket_api + f"/projects/{project_key}/repos/{repo_name}",
+                                                   headers={"Authorization": f"Bearer {bitbucket_access_token}"})
 
             if (bitbucket_repo_response.status_code == 404):
                 self.log.error("Repository not found on BitBucket", repo_name=repo_name)
@@ -248,10 +247,9 @@ class RepoOps:
             # Add GitHub Link
             if (push_to_org):
                 # Check if same repository already exists on GitHub target org
-                github_org_repo_check_link = self.github_api + "/repos/{}/{}".format(
-                    self.target_org, prefixed_repo_name)
+                github_org_repo_check_link = self.github_api + f"/repos/{self.target_org}/{prefixed_repo_name}"
                 github_org_repo_check = requests.get(github_org_repo_check_link,
-                                                     headers={"Authorization": "Bearer {}".format(github_access_token)})
+                                                     headers={"Authorization": f"Bearer {github_access_token}"})
                 # Repository with a similar name already exists on GitHub
                 if (github_org_repo_check.status_code == 200):  # Existing repository
                     github_org_repo_check = json.loads(github_org_repo_check.text)
@@ -277,9 +275,9 @@ class RepoOps:
                                    target_org=self.target_org)
             else:
                 # Check if same repository already exists on GitHub
-                github_repo_check_link = self.github_api + "/repos/{}/{}".format(github_account_id, prefixed_repo_name)
+                github_repo_check_link = self.github_api + f"/repos/{github_account_id}/{prefixed_repo_name}"
                 github_repo_check = requests.get(github_repo_check_link,
-                                                 headers={"Authorization": "Bearer {}".format(github_access_token)})
+                                                 headers={"Authorization": f"Bearer {github_access_token}"})
                 # Repository with a similar name already exists on GitHub
                 if (github_repo_check.status_code == 200):  # Existing repository
                     github_repo_check = json.loads(github_repo_check.text)
@@ -322,9 +320,9 @@ class RepoOps:
 
         if (push_to_org):
             # Create new repo of same name on GitHub target org
-            git_response = requests.post(self.github_api + "/orgs/{}/repos".format(self.target_org),
+            git_response = requests.post(self.github_api + f"/orgs/{self.target_org}/repos",
                                          data=json.dumps(request_payload),
-                                         headers={"Authorization": "Bearer {}".format(github_access_token)})
+                                         headers={"Authorization": f"Bearer {github_access_token}"})
             if (git_response.status_code != 201):
                 self.log.error("Failed to create new repository on organization",
                                result="FAILED",
@@ -341,7 +339,7 @@ class RepoOps:
             # Create new repo of same name on GitHub Account
             git_response = requests.post(self.github_api + "/user/repos",
                                          data=json.dumps(request_payload),
-                                         headers={"Authorization": "Bearer {}".format(github_access_token)})
+                                         headers={"Authorization": f"Bearer {github_access_token}"})
             if (git_response.status_code != 201):
                 self.log.error("Failed to create new repository on personal account",
                                result="FAILED",
@@ -395,8 +393,7 @@ class RepoOps:
                 bitbucket_link_domain = bitbucket_link.split("//")[1]
                 self.log.info("Cloning repository", repo_name=repo_name)
                 try:
-                    git.clone("https://{}:{}@{}".format(bitbucket_account_id, bitbucket_access_token,
-                                                        bitbucket_link_domain))
+                    git.clone(f"https://{bitbucket_account_id}:{bitbucket_access_token}@{bitbucket_link_domain}")
                     self.log.debug("Cloned repository", result="SUCCESS", repo_name=repo_name)
                 except ErrorReturnCode as e:
                     self.log.error("Failed to clone repository",
@@ -444,8 +441,7 @@ class RepoOps:
         # Use this instead of setting the authenticated link as a new remote.
         # Remote links get stored in git config
         github_link_domain = github_link.split("//")[1]
-        authenticated_github_link = "https://{}:{}@{}".format(github_account_id, github_access_token,
-                                                              github_link_domain)
+        authenticated_github_link = f"https://{github_account_id}:{github_access_token}@{github_link_domain}"
 
         git.remote('set-url', 'origin', bitbucket_link)
         self.log.debug("Syncing Tags. Set origin to BitBucket", repo_name=repo_name, bitbucket_link=bitbucket_link)
@@ -473,7 +469,7 @@ class RepoOps:
         for tag_name in tags:
             self.log.info("Syncing tag for repository", repo_name=repo_name, tag_name=tag_name)
             try:
-                tag_refspec = "refs/tags/{}:refs/tags/{}".format(tag_name, tag_name)
+                tag_refspec = f"refs/tags/{tag_name}:refs/tags/{tag_name}"
                 git.push(authenticated_github_link, tag_refspec)
                 self.log.debug("Pushed tag for repository",
                                result="SUCCESS",
@@ -506,8 +502,7 @@ class RepoOps:
         # Use this instead of setting the authenticated link as a new remote.
         # Remote links get stored in git config
         github_link_domain = github_link.split("//")[1]
-        authenticated_github_link = "https://{}:{}@{}".format(github_account_id, github_access_token,
-                                                              github_link_domain)
+        authenticated_github_link = f"https://{github_account_id}:{github_access_token}@{github_link_domain}"
 
         # Set remote to bitbucket
         git.remote('set-url', 'origin', bitbucket_link)
@@ -535,7 +530,7 @@ class RepoOps:
             self.log.info("Syncing branch for repository", repo_name=repo_name, branch_name=branch_name)
 
             if (remote_name == 'origin'):
-                branch_refspec = "refs/remotes/origin/{}:refs/heads/{}".format(branch_name, branch_name)
+                branch_refspec = f"refs/remotes/origin/{branch_name}:refs/heads/{branch_name}"
                 try:
                     self.log.info("Pushing branch for repository",
                                   repo_name=prefixed_repo_name,
@@ -571,8 +566,8 @@ class RepoOps:
     # Get list of all teams from GHE target org
     def get_teams_info(self, github_access_token):
         self.log.info("Fetching teams list from GitHub")
-        teams_info_list = requests.get(self.github_api + "/orgs/{}/teams".format(self.target_org),
-                                       headers={"Authorization": "Bearer {}".format(github_access_token)})
+        teams_info_list = requests.get(self.github_api + f"/orgs/{self.target_org}/teams",
+                                       headers={"Authorization": f"Bearer {github_access_token}"})
         if (teams_info_list.status_code != 200):
             self.log.error("Failed to fetch teams list", result="FAILED", target_org=self.target_org)
             exit(1)
@@ -588,8 +583,8 @@ class RepoOps:
 
             # Get Team's ID
             self.log.info("Fetching Team ID", teamName=team)
-            team_info = requests.get(self.github_api + "/orgs/{}/teams/{}".format(self.target_org, team),
-                                     headers={"Authorization": "Bearer {}".format(github_access_token)})
+            team_info = requests.get(self.github_api + f"/orgs/{self.target_org}/teams/{team}",
+                                     headers={"Authorization": f"Bearer {github_access_token}"})
             if (team_info.status_code != 200):
                 self.log.error("Failed to fetch team information", result="FAILED", team_name=team)
                 self.log.error("No repositories assigned to team", result="FAILED", team_name=team)
@@ -601,10 +596,10 @@ class RepoOps:
             failure_count = 0
             for prefixed_repo_name in prefixed_repos:
                 # Assign repo to team
-                assign_response = requests.put(
-                    self.github_api + "/teams/{}/repos/{}/{}".format(team_id, self.target_org, prefixed_repo_name),
-                    data=json.dumps(admin_permissions),
-                    headers={"Authorization": "Bearer {}".format(github_access_token)})
+                assign_response = requests.put(self.github_api +
+                                               f"/teams/{team_id}/repos/{self.target_org}/{prefixed_repo_name}",
+                                               data=json.dumps(admin_permissions),
+                                               headers={"Authorization": f"Bearer {github_access_token}"})
                 if (assign_response.status_code != 204):
                     failure_count += 1
                     self.log.error("Failed to assign repository to team",

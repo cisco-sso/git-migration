@@ -16,8 +16,8 @@ def start_session(bitbucket_account_id, bitbucket_access_token, github_account_i
     target_org = utils.ReadUtils.get_target_org()
     # Ask for migration destination
     push_answer = questionary.select("Migrate repositories to?",
-                                     choices=["GitHub {} org".format(target_org), "Personal Github Account"]).ask()
-    push_to_org = push_answer == "GitHub {} org".format(target_org)
+                                     choices=[f"GitHub {target_org} org", "Personal Github Account"]).ask()
+    push_to_org = push_answer == f"GitHub {target_org} org"
 
     # Check if credentials are right and can push to the chosen destination
     github_push_check = cred_ops.check_github_push_creds(push_to_org, github_account_id, github_access_token)
@@ -39,10 +39,10 @@ def start_session(bitbucket_account_id, bitbucket_access_token, github_account_i
 
     # Get list of all repos
     repo_names = repo_ops.get_bitbucket_repos(project_key, bitbucket_access_token)
-    repo_list = [{'name': "{}".format(repo)} for repo in repo_names]
+    repo_list = [{'name': repo} for repo in repo_names]
 
     # Ask which repos to migrate
-    repo_answers = questionary.checkbox("Which repos to migrate from {}:{}?".format(project_name, project_key),
+    repo_answers = questionary.checkbox(f"Which repos to migrate from {project_name}:{project_key}?",
                                         choices=repo_list).ask()
 
     # Process repos to obtain details
@@ -58,8 +58,8 @@ def start_session(bitbucket_account_id, bitbucket_access_token, github_account_i
     } for repo in processed_repos if ('github_link' not in repo)]
 
     # Confirm to proceed with syncing and migration
-    confirm_migrate = questionary.confirm('Proceed with syncing {} and migrating {} repos?'.format(
-        total_repos - new_repos, new_repos)).ask()
+    confirm_migrate = questionary.confirm(
+        f"Proceed with syncing {total_repos-new_repos} and migrating {new_repos} repos?").ask()
     if (not confirm_migrate):
         log.debug("NO REPOSITORIES SYNCED OR MIGRATED")
         exit(0)
@@ -97,7 +97,7 @@ def start_session(bitbucket_account_id, bitbucket_access_token, github_account_i
     # Ask which repos to assign to which team
     repo_assignment = {}
     for team in selected_teams:
-        repos_for_teams = questionary.checkbox('Select the repos to assign to {} team'.format(team),
+        repos_for_teams = questionary.checkbox(f"Select the repos to assign to {team} team",
                                                choices=prefixed_migration_repos).ask()
         if (len(repos_for_teams) != 0):
             repo_assignment[team] = repos_for_teams
