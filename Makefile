@@ -13,6 +13,10 @@ format:  ## Auto-format and check pep8
 	pipenv run yapf -i $$(find * -type f -name '*.py')
 	pipenv run flake8 ./app ./tests
 
+format-yaml: ## Removes comments from YAML files, recommended to use in-editor formatter instead
+	cat config.yml | pipenv run yq -y . > new_config.yml
+	mv new_config.yml config.yml
+
 test:  ## Run tests
 	pipenv run pytest
 	pipenv run flake8 ./app ./tests

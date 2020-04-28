@@ -11,13 +11,15 @@ from app import utils
 
 
 class RepoOps:
-    def __init__(self, bitbucket_api, github_api, prefix, console_log_level, console_log_normal, file_log_level):
+    def __init__(self, bitbucket_api, github_api, prefix, master_branch_prefix, console_log_level, console_log_normal,
+                 file_log_level):
         self.bitbucket_api = bitbucket_api
         self.github_api = github_api
         self.prefix = prefix
         self.log = utils.LogUtils.get_logger(os.path.basename(__file__), console_log_level, console_log_normal,
                                              file_log_level)
         self.target_org = utils.ReadUtils.get_target_org()
+        self.master_branch_prefix = master_branch_prefix
 
     # Returns list of all projects on BitBucket
     def get_bitbucket_projects(self, bitbucket_access_token):
@@ -194,8 +196,8 @@ class RepoOps:
             return repositories
 
         # Boolean to use/not-use regex matching for repository names for this project
-        project_exclude_regex = project_exclude_config["regex"] if (
-            "regex" in project_exclude_config) else exclude_regex
+        project_exclude_regex = project_exclude_config["regex"] if ("regex"
+                                                                    in project_exclude_config) else exclude_regex
         project_exclude_config = project_exclude_config["repo_config"] if (
             "repo_config" in project_exclude_config) else project_exclude_config
 
@@ -530,7 +532,15 @@ class RepoOps:
             self.log.info("Syncing branch for repository", repo_name=repo_name, branch_name=branch_name)
 
             if (remote_name == 'origin'):
-                branch_refspec = f"refs/remotes/origin/{branch_name}:refs/heads/{branch_name}"
+
+                # Temporarily avoid sync to GitHub master branches
+                # Sync BitBucket master to a differently named branch on GHE (bb-master)
+                if (branch_name == "master"):
+                    prefixed_master_branch_name = self.master_branch_prefix + branch_name
+                    branch_refspec = f"refs/remotes/origin/{branch_name}:refs/heads/{prefixed_master_branch_name}"
+                else:
+                    branch_refspec = f"refs/remotes/origin/{branch_name}:refs/heads/{branch_name}"
+
                 try:
                     self.log.info("Pushing branch for repository",
                                   repo_name=prefixed_repo_name,

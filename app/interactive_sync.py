@@ -7,11 +7,11 @@ from app import utils, cred_operations, repo_operations
 
 
 def start_session(bitbucket_account_id, bitbucket_access_token, github_account_id, github_access_token, bitbucket_api,
-                  github_api, prefix, console_log_level, console_log_normal, file_log_level):
+                  github_api, prefix, master_branch_prefix, console_log_level, console_log_normal, file_log_level):
     # Objects for operations related to credentials and repository actions
     cred_ops = cred_operations.CredOps(bitbucket_api, github_api, console_log_level, console_log_normal, file_log_level)
-    repo_ops = repo_operations.RepoOps(bitbucket_api, github_api, prefix, console_log_level, console_log_normal,
-                                       file_log_level)
+    repo_ops = repo_operations.RepoOps(bitbucket_api, github_api, prefix, master_branch_prefix, console_log_level,
+                                       console_log_normal, file_log_level)
     log = utils.LogUtils.get_logger(os.path.basename(__file__), console_log_level, console_log_normal, file_log_level)
     target_org = utils.ReadUtils.get_target_org()
     # Ask for migration destination
@@ -73,7 +73,7 @@ def start_session(bitbucket_account_id, bitbucket_access_token, github_account_i
               migrated_repos=new_repos)
 
     # --------- TEAM ASSIGNMENT ---------
-    if (not push_to_org):
+    if ((not push_to_org) or (new_repos == 0)):
         exit(0)
     confirm_assign_to_team = questionary.confirm(
         'Do you want to assign some of the migrated repos to different teams?').ask()

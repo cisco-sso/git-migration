@@ -40,6 +40,14 @@ class ReadUtils():
             prefix = yaml.load(file, Loader=yaml.FullLoader)['prefix']
         return prefix
 
+    # Read and return the prefis to be used for renaming the master branch
+    @staticmethod
+    def get_master_branch_prefix():
+        cur_dir_path = os.getcwd()
+        with open(cur_dir_path + "/config.yml") as file:
+            master_branch_prefix = yaml.load(file, Loader=yaml.FullLoader)['master_branch_prefix']
+        return master_branch_prefix
+
 
 class RegexUtils():
     @staticmethod

@@ -8,6 +8,7 @@ ipdb = "*"
 flake8 = "*"
 yapf = "*"
 pep8-naming = "*"
+yq = "*"
 
 [packages]
 pip = "*"

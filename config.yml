@@ -10,7 +10,9 @@ target_org: ***REMOVED***
 # You can choose to make this an empty string as well, to maintain same repository names
 # IMPORTANT Only use alphabets, numbers, hyphen, underscore and fullstops.
 # GitHub converts any substring of other characters to a single hyphen. eg: ~!@123ABC_po%. becomes -123ABC_po-.
-prefix: "bb-"
+prefix: ""
+
+master_branch_prefix: bb-
 
 # Specify log levels for console and files
 console_log_level: info

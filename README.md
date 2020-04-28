@@ -105,10 +105,10 @@ There are 2 main keys, `include` and `exclude`. These together control which rep
 
 ```yaml
 sync_config:
-	include:
-		# config for repositories to include
-	exclude:
-		# config for repositories to exclude
+  include:
+    # config for repositories to include
+  exclude:
+    # config for repositories to exclude
 ```
 
 
@@ -121,28 +121,28 @@ You can choose to exclude the repositories from the sync/migration too. **Exclus
 
 ```yaml
 sync_config:
-	include:
-		# config for repositories to include
-		project-key-1:
-			- repo-name-1 # These repositories not assigned to any team
-			- repo-name-two # after being migrated over to GitHub Enterprise
-			- team-name-alpha:
-				- repo-name-3
-				- repo-name-4
-			- team-name-beta:
-				- repo-name-4
-				- repo-name-two # This repo shall be assigned to team-beta as it is mentioned again
-				- repo-name-5
-		project-key-2:
-			- repo-name-35
-			- team-name-sharks:
-				- repo-name-27
-	exclude:
-		# config for repositories to exclude
-		project-key-1:
-			- repo-name-5
-		project-key-2:
-			- repo-name-something
+  include:
+    # config for repositories to include
+    project-key-1:
+      - repo-name-1 # These repositories not assigned to any team
+      - repo-name-two # after being migrated over to GitHub Enterprise
+      - team-name-alpha:
+        - repo-name-3
+        - repo-name-4
+      - team-name-beta:
+        - repo-name-4
+        - repo-name-two # This repo shall be assigned to team-beta as it is mentioned again
+        - repo-name-5
+    project-key-2:
+      - repo-name-35
+      - team-name-sharks:
+        - repo-name-27
+  exclude:
+    # config for repositories to exclude
+    project-key-1:
+      - repo-name-5
+    project-key-2:
+      - repo-name-something
 ```
 
 
@@ -170,9 +170,9 @@ sync_config:
   exclude:
     regex: true # Works for exclude as well
     repo_config:
-      ***REMOVED***: # regex matching attribute for these are inherited from the parent
+      project-key-1: # regex matching attribute for these are inherited from the parent
         - ***REMOVED***
-      ***REMOVED***: # this too is regex matched
+      project-key-2: # this too is regex matched
         - some-regex-pattern
 ```
 
@@ -190,4 +190,4 @@ IMPORTANT:
 
 - The `include.regex` and `exclude.regex` do NOT affect each other and are not inherited.
 - Do NOT mention a `sync_config.regex`. Support for that is NOT added.
-- By deafult, regex is FALSE.
+- By default, regex is FALSE.

@@ -68,9 +68,16 @@ def is_interactive():
               show_default=utils.ReadUtils.get_prefix(),
               type=str,
               help="Prefix to be added to the names of sync'd repositories at destination")
+@click.option('--master-branch-prefix',
+              prompt=not is_help_called() and is_interactive(),
+              required=not is_help_called() and not is_interactive(),
+              default=utils.ReadUtils.get_master_branch_prefix(),
+              show_default=utils.ReadUtils.get_master_branch_prefix(),
+              type=str,
+              help="Prefix to be added to rename the master branch from BitBucket")
 @app_cli.pass_context
 def cli(ctx, bitbucket_url, github_url, bitbucket_account_id, bitbucket_access_token, github_account_id,
-        github_access_token, prefix):
+        github_access_token, prefix, master_branch_prefix):
     """Sync Bitbucket and GitHub repositories"""
     ctx.bitbucket_api = bitbucket_url
     ctx.github_api = github_url
@@ -79,6 +86,7 @@ def cli(ctx, bitbucket_url, github_url, bitbucket_account_id, bitbucket_access_t
     ctx.github_account_id = github_account_id
     ctx.github_access_token = github_access_token
     ctx.prefix = prefix
+    ctx.master_branch_prefix = master_branch_prefix
 
 
 @cli.command()
@@ -95,8 +103,8 @@ def auto(ctx, run_once, personal_account, block_new_migrations):
     push_to_org = not personal_account
     cred_ops = cred_operations.CredOps(ctx.bitbucket_api, ctx.github_api, ctx.console_log_level, ctx.console_log_normal,
                                        ctx.file_log_level)
-    repo_ops = repo_operations.RepoOps(ctx.bitbucket_api, ctx.github_api, ctx.prefix, ctx.console_log_level,
-                                       ctx.console_log_normal, ctx.file_log_level)
+    repo_ops = repo_operations.RepoOps(ctx.bitbucket_api, ctx.github_api, ctx.prefix, ctx.master_branch_prefix,
+                                       ctx.console_log_level, ctx.console_log_normal, ctx.file_log_level)
 
     # Check if credentials are right and can push to the chosen destination
     github_push_check = cred_ops.check_github_push_creds(push_to_org, ctx.github_account_id, ctx.github_access_token)
@@ -142,4 +150,5 @@ def interactive(ctx):
     # Use ctx.log.info("message") to log
     interactive_sync.start_session(ctx.bitbucket_account_id, ctx.bitbucket_access_token, ctx.github_account_id,
                                    ctx.github_access_token, ctx.bitbucket_api, ctx.github_api, ctx.prefix,
-                                   ctx.console_log_level, ctx.console_log_normal, ctx.file_log_level)
+                                   ctx.master_branch_prefix, ctx.console_log_level, ctx.console_log_normal,
+                                   ctx.file_log_level)
