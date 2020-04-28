@@ -1,5 +1,8 @@
 integrations:
 
+# Create a separate integration per combination of
+#   <team>-<source_repository>-<target-reponsitory>
+
 - name: ***REMOVED***-bb1-to-gh3
   enabled: true
   sync:
@@ -13,17 +16,31 @@ integrations:
     #   Github supports `org/<name>` and `user/<name>`
     org: project/***REMOVED***
     repos:
-      # List of filters to be evaluated in order.  Order matters
+      # List of filters to be evaluated in order.
+      #   Order does not matter other than includes are processed before excludes
       #   Regexes implied by leading and trailing `/`
       filters:
-      - include: ***REMOVED***
-      - include: /^.*-***REMOVED***$/
-      - exclude: ***REMOVED***
-      - exclude: /***REMOVED***/
+        include:
+          - ***REMOVED***
+          - /^.*-***REMOVED***$/
+        exclude:
+          - ***REMOVED***
+          - /***REMOVED***/
   target:
     type: github-enterprise
     base_url: https://***REMOVED***
     org: ***REMOVED***
+    # teams are list of teams to add (no pattern support)
+    teams:
+      read_only:
+      - ***REMOVED***
+      read_write:
+      - ***REMOVED***
+    users:
+      read_only:
+      - user-id-1
+      read_write:
+      - user-id-2
     # branch_modifiers allow you to rewrite target repo names
     #   By default, empty branch_modifies sync exactly the same branch names from source to target
     branch_modifiers:
@@ -31,14 +48,18 @@ integrations:
       # match can accept regex implied by leading and trailing `/`
       match: master
       prefix: bb-
-  # Example:
-  # - name: all-branches
-  #   match: /.*/
-  #   prefix: bb-
-  # Example:
+  # Example (no need to implement):
   # - name: all-branches-except-master
   #   match: /^(?!master).*/
   #   prefix: bb-
+  # Example (no need to implement):
+  # - name: all-branches
+  #   match: /.*/
+  #   prefix: bb-
+  # Example (no need to implement):
+  # - name: rename-branch
+  #   match: featureX
+  #   rename: featureY
 
 - name: personal-***REMOVED***-bb-to-gh3
   enabled: false
@@ -51,11 +72,13 @@ integrations:
     org: user/***REMOVED***
     repos:
       filters:
-      - include: /.*/
+        include:
+          -  /.*/
+        exclude: []
   target:
     type: github-enterprise
     base_url: https://***REMOVED***
-    org: ***REMOVED***
+    org: user/***REMOVED***
     branch_modifiers: []
 
 - name: ***REMOVED***sso-github.com-to-gh3
@@ -69,7 +92,9 @@ integrations:
     org: ***REMOVED***
     repos:
       filters:
-      - include: /.*/
+        include:
+          -  /.*/
+        exclude: []
   target:
     type: github-enterprise
     base_url: https://***REMOVED***
