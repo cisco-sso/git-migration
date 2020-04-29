@@ -83,7 +83,7 @@ source ~/.zprofile
 
 ### `git-migration sync auto`
 
-Automatically syncs the repositories from the projects mentioned in the `app/config.json` . This config takes regex patterns to filter the repositories to sync over to GitHub.
+Automatically syncs the repositories from the projects mentioned in the `config.yml` . This config supports normal strings as well as regex patterns to filter the repositories to sync over to GitHub.
 
 
 
