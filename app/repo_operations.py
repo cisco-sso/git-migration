@@ -385,17 +385,20 @@ class RepoOps:
                     self.log.error("Failed to make new repository", result="FAILED", repo_name=prefixed_repo_name)
                     continue
                 repo['github_link'] = github_link
+            
+            # Use this instead of setting the authenticated link as a new remote.
+            # Remote links get stored in git config
             bitbucket_link = repo['bitbucket_link']
+            bitbucket_link_domain = bitbucket_link.split("//")[1]
+            authenticated_bitbucket_link = f"https://{bitbucket_account_id}:{bitbucket_access_token}@{bitbucket_link_domain}"
 
             self.log.info("Syncing repository", repo_name=repo_name)
 
             # Clone the repository from BitBucket
             if (not os.path.isdir(repo_name)):
-
-                bitbucket_link_domain = bitbucket_link.split("//")[1]
                 self.log.info("Cloning repository", repo_name=repo_name)
                 try:
-                    git.clone(f"https://{bitbucket_account_id}:{bitbucket_access_token}@{bitbucket_link_domain}")
+                    git.clone(authenticated_bitbucket_link)
                     self.log.debug("Cloned repository", result="SUCCESS", repo_name=repo_name)
                 except ErrorReturnCode as e:
                     self.log.error("Failed to clone repository",
@@ -406,7 +409,7 @@ class RepoOps:
 
             os.chdir(repo_name)  # IMPORTANT DO NOT DELETE
             # Sync all tags individually
-            tags_sync_success, all_tags, failed_tags = self.sync_tags(repo, github_account_id, github_access_token)
+            tags_sync_success, all_tags, failed_tags = self.sync_tags(repo, bitbucket_account_id, bitbucket_access_token, github_account_id, github_access_token)
             if (not tags_sync_success):
                 self.log.warning("Failed to sync tags for repository",
                                  result="FAILED",
@@ -414,7 +417,7 @@ class RepoOps:
                                  failed_tags=failed_tags)
             # Sync all branches individually
             branches_sync_success, all_branches, failed_branches = self.sync_branches(
-                repo, github_account_id, github_access_token)
+                repo, bitbucket_account_id, bitbucket_access_token, github_account_id, github_access_token)
             if (not branches_sync_success):
                 self.log.warning("Failed to sync branches for repository",
                                  result="FAILED",
@@ -433,7 +436,7 @@ class RepoOps:
                 self.assign_repos_to_teams(repo_assignment, github_access_token)
             os.chdir("..")  # IMPORTANT DO NOT DELETE
 
-    def sync_tags(self, repo, github_account_id, github_access_token):
+    def sync_tags(self, repo, bitbucket_account_id, bitbucket_access_token, github_account_id, github_access_token):
         # Everytime, tags are fetched from remote (bitbucket) and then pushed to github
         repo_name = repo['name']
         prefixed_repo_name = self.prefix + repo_name
@@ -445,12 +448,16 @@ class RepoOps:
         github_link_domain = github_link.split("//")[1]
         authenticated_github_link = f"https://{github_account_id}:{github_access_token}@{github_link_domain}"
 
+        bitbucket_link_domain = bitbucket_link.split("//")[1]
+        authenticated_bitbucket_link = f"https://{bitbucket_account_id}:{bitbucket_access_token}@{bitbucket_link_domain}"
+
         git.remote('set-url', 'origin', bitbucket_link)
         self.log.debug("Syncing Tags. Set origin to BitBucket", repo_name=repo_name, bitbucket_link=bitbucket_link)
 
         # Fetch tags from origin (bitbucket)
         self.log.info("Fetching refs (tags) from origin", repo_name=repo_name)
-        git.fetch('origin')
+        # git.fetch('origin')
+        git.fetch(authenticated_bitbucket_link)
         self.log.debug("Fetched refs (tags) from BitBucket", result="SUCCESS", repo_name=repo_name)
 
         # List all tags
@@ -495,7 +502,7 @@ class RepoOps:
         tags_sync_success = set(tags) == set(success_tags)
         return tags_sync_success, tags, failed_tags
 
-    def sync_branches(self, repo, github_account_id, github_access_token):
+    def sync_branches(self, repo, bitbucket_account_id, bitbucket_access_token, github_account_id, github_access_token):
         repo_name = repo['name']
         prefixed_repo_name = self.prefix + repo_name
         github_link = repo['github_link']
@@ -506,13 +513,17 @@ class RepoOps:
         github_link_domain = github_link.split("//")[1]
         authenticated_github_link = f"https://{github_account_id}:{github_access_token}@{github_link_domain}"
 
+        bitbucket_link_domain = bitbucket_link.split("//")[1]
+        authenticated_bitbucket_link = f"https://{bitbucket_account_id}:{bitbucket_access_token}@{bitbucket_link_domain}"
+
         # Set remote to bitbucket
         git.remote('set-url', 'origin', bitbucket_link)
         self.log.debug("Syncing branches. Set origin to Bitbucket", repo_name=repo_name, bitbucket_link=bitbucket_link)
 
         # Fetch branches from origin (bitbucket)
         self.log.info("Fetching refs (branches) from origin", repo_name=repo_name)
-        git.fetch('origin')
+        # git.fetch('origin')
+        git.fetch(authenticated_bitbucket_link)
         self.log.debug("Fetched refs (branches) from BitBucket", result="SUCCESS", repo_name=repo_name)
 
         # List remote branches

@@ -37,7 +37,8 @@ class ReadUtils():
     def get_prefix():
         cur_dir_path = os.getcwd()
         with open(cur_dir_path + "/config.yml") as file:
-            prefix = yaml.load(file, Loader=yaml.FullLoader)['prefix']
+            config = yaml.load(file, Loader=yaml.FullLoader)
+        prefix = config["prefix"] if ("prefix" in config) else ""
         return prefix
 
     # Read and return the prefis to be used for renaming the master branch
@@ -45,7 +46,8 @@ class ReadUtils():
     def get_master_branch_prefix():
         cur_dir_path = os.getcwd()
         with open(cur_dir_path + "/config.yml") as file:
-            master_branch_prefix = yaml.load(file, Loader=yaml.FullLoader)['master_branch_prefix']
+            config = yaml.load(file, Loader=yaml.FullLoader)
+        master_branch_prefix = config["master_branch_prefix"] if ("master_branch_prefix" in config) else ""
         return master_branch_prefix
 
 
