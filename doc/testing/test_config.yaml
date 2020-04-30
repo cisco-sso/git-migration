@@ -10,10 +10,6 @@ integrations:
     source:
       type: bitbucket
       base_url: https://***REMOVED***
-      # There might be different accounts and access token for different integrations
-      # Better to ask for the ENV VAR NAME instead of enforcing the var name?
-      account_id: CICD_BB1_TO_GH3_BITBUCKET_ACCOUNT_ID
-      access_token: CICD_BB1_TO_GH3_BITBUCKET_ACCESS_TOKEN
       # `kind` format varies depending on type: Bitbucket or Github
       #   Bitbucket supports `project/<name>` and `user/<name>`
       #   Github supports `org/<name>` and `user/<name>`
@@ -32,8 +28,6 @@ integrations:
     target:
       type: github-enterprise
       base_url: https://***REMOVED***
-      account_id: CICD_BB1_TO_GH3_GHE_ACCOUNT_ID
-      access_token: CICD_BB1_TO_GH3_GHE_ACCESS_TOKEN
       # org/***REMOVED*** seems more coherent with the rest like project/***REMOVED***, user/***REMOVED***
       kind: org/***REMOVED***
       # teams are list of teams to add (no pattern support)
@@ -75,8 +69,6 @@ integrations:
     source:
       type: bitbucket
       base_url: https://***REMOVED***
-      account_id: DAVW_BITBUCKET_ACCOUNT_ID
-      access_token: DAVW_BITBUCKET_ACCESS_TOKEN
       kind: user/***REMOVED***
       repos:
         filters:
@@ -97,8 +89,6 @@ integrations:
     source:
       type: github-public
       base_url: https://www.github.com
-      account_id: DAVW_GHE_ACCOUNT_ID
-      access_token: DAVW_GHE_ACCESS_TOKEN
       kind: org/***REMOVED***
       repos:
         filters:

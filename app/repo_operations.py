@@ -391,7 +391,7 @@ class RepoOps:
                     continue
                 repo['github_link'] = github_link
                 repo['new_migration'] = True
-            
+
             # Use this instead of setting the authenticated link as a new remote.
             # Remote links get stored in git config
             bitbucket_link = repo['bitbucket_link']
@@ -415,7 +415,9 @@ class RepoOps:
 
             os.chdir(repo_name)  # IMPORTANT DO NOT DELETE
             # Sync all tags individually
-            tags_sync_success, all_tags, failed_tags = self.sync_tags(repo, bitbucket_account_id, bitbucket_access_token, github_account_id, github_access_token)
+            tags_sync_success, all_tags, failed_tags = self.sync_tags(repo, bitbucket_account_id,
+                                                                      bitbucket_access_token, github_account_id,
+                                                                      github_access_token)
             if (not tags_sync_success):
                 self.log.warning("Failed to sync tags for repository",
                                  result="FAILED",
@@ -545,9 +547,9 @@ class RepoOps:
         try:
             # if master exists on origin, move that to the start of the array
             # pushing 'master' first makes it the default branch on github
-            has_master = remote_branches.remove('origin/master') == None
+            remote_branches.remove('origin/master')
             remote_branches = ['origin/master'] + remote_branches
-        except:
+        except Exception:
             # 'master' did not exist on origin
             pass
 
@@ -572,40 +574,41 @@ class RepoOps:
                         if (new_migration):
                             master_branch_refspecs.append(f"refs/remotes/origin/{branch_name}:refs/heads/{branch_name}")
                         prefixed_master_branch_name = self.master_branch_prefix + branch_name
-                        master_branch_refspecs.append(f"refs/remotes/origin/{branch_name}:refs/heads/{prefixed_master_branch_name}")
+                        master_branch_refspecs.append(
+                            f"refs/remotes/origin/{branch_name}:refs/heads/{prefixed_master_branch_name}")
                     else:
                         master_branch_refspecs.append(f"refs/remotes/origin/{branch_name}:refs/heads/{branch_name}")
                     for branch_refspec in master_branch_refspecs:
                         target_branch_name = branch_refspec.split('/')[-1]
                         try:
                             self.log.info("Pushing branch for repository",
-                                        repo_name=prefixed_repo_name,
-                                        repo_prefix=self.prefix,
-                                        branch_name=branch_name,
-                                        target_branch_name=target_branch_name)
+                                          repo_name=prefixed_repo_name,
+                                          repo_prefix=self.prefix,
+                                          branch_name=branch_name,
+                                          target_branch_name=target_branch_name)
                             git.push(authenticated_github_link, branch_refspec)
                             # Success on syncing current branch
                             self.log.debug("Successfully synced branch for repository",
-                                        result="SUCCESS",
-                                        repo_name=prefixed_repo_name,
-                                        repo_prefix=self.prefix,
-                                        branch_name=branch_name,
-                                        target_branch_name=target_branch_name)
+                                           result="SUCCESS",
+                                           repo_name=prefixed_repo_name,
+                                           repo_prefix=self.prefix,
+                                           branch_name=branch_name,
+                                           target_branch_name=target_branch_name)
                             success_branches.append(branch_name)
                         except ErrorReturnCode as e:
                             # Redact or remove the access token before logging
                             stderr = utils.StringUtils.redact_error(e.stderr, github_access_token, "<ACCESS-TOKEN>")
                             self.log.error("Failed to push changes to origin branch",
-                                        result="FAILED",
-                                        repo_name=prefixed_repo_name,
-                                        repo_prefix=self.prefix,
-                                        branch_name=branch_name,
-                                        target_branch_name=target_branch_name,
-                                        exit_code=e.exit_code,
-                                        stderr=stderr)
+                                           result="FAILED",
+                                           repo_name=prefixed_repo_name,
+                                           repo_prefix=self.prefix,
+                                           branch_name=branch_name,
+                                           target_branch_name=target_branch_name,
+                                           exit_code=e.exit_code,
+                                           stderr=stderr)
                             failed_branches.append(branch_name)
-                            continue # Continue to the next master_branch_refspec
-                    continue # Continue to the next branch
+                            continue  # Continue to the next master_branch_refspec
+                    continue  # Continue to the next branch
 
                 branch_refspec = f"refs/remotes/origin/{branch_name}:refs/heads/{branch_name}"
                 try:
