@@ -378,6 +378,7 @@ class RepoOps:
             teams_to_assign = repo["teams"] if ("teams" in repo) else []
             if ('github_link' in repo):
                 github_link = repo['github_link']
+                repo['new_migration'] = False
                 pass
             else:
                 github_link = self.make_new_repo(push_to_org, repo, github_account_id, github_access_token)
@@ -385,6 +386,7 @@ class RepoOps:
                     self.log.error("Failed to make new repository", result="FAILED", repo_name=prefixed_repo_name)
                     continue
                 repo['github_link'] = github_link
+                repo['new_migration'] = True
             
             # Use this instead of setting the authenticated link as a new remote.
             # Remote links get stored in git config
@@ -508,6 +510,9 @@ class RepoOps:
         github_link = repo['github_link']
         bitbucket_link = repo['bitbucket_link']
 
+        # Boolean: whether the repo is a new migration to GitHub
+        new_migration = repo['new_migration']
+
         # Use this instead of setting the authenticated link as a new remote.
         # Remote links get stored in git config
         github_link_domain = github_link.split("//")[1]
@@ -533,6 +538,15 @@ class RepoOps:
             if (remote and not re.match("^.*/HEAD -> .*$", remote))
         ]
 
+        try:
+            # if master exists on origin, move that to the start of the array
+            # pushing 'master' first makes it the default branch on github
+            has_master = remote_branches.remove('origin/master') == None
+            remote_branches = ['origin/master'] + remote_branches
+        except:
+            # 'master' did not exist on origin
+            pass
+
         success_branches = []
         failed_branches = []
 
@@ -544,14 +558,52 @@ class RepoOps:
 
             if (remote_name == 'origin'):
 
-                # Temporarily avoid sync to GitHub master branches
-                # Sync BitBucket master to a differently named branch on GHE (bb-master)
+                # Different way to handle master branches, support prefixing.
                 if (branch_name == "master"):
-                    prefixed_master_branch_name = self.master_branch_prefix + branch_name
-                    branch_refspec = f"refs/remotes/origin/{branch_name}:refs/heads/{prefixed_master_branch_name}"
-                else:
-                    branch_refspec = f"refs/remotes/origin/{branch_name}:refs/heads/{branch_name}"
+                    master_branch_refspecs = []
+                    prefix_exists = self.master_branch_prefix != ""
+                    if (prefix_exists):
+                        # Order is IMPORTANT, 'master' should be added before prefixed_master.
+                        # Default branch is the first branch that is pushed to GitHub
+                        if (new_migration):
+                            master_branch_refspecs.append(f"refs/remotes/origin/{branch_name}:refs/heads/{branch_name}")
+                        prefixed_master_branch_name = self.master_branch_prefix + branch_name
+                        master_branch_refspecs.append(f"refs/remotes/origin/{branch_name}:refs/heads/{prefixed_master_branch_name}")
+                    else:
+                        master_branch_refspecs.append(f"refs/remotes/origin/{branch_name}:refs/heads/{branch_name}")
+                    for branch_refspec in master_branch_refspecs:
+                        target_branch_name = branch_refspec.split('/')[-1]
+                        try:
+                            self.log.info("Pushing branch for repository",
+                                        repo_name=prefixed_repo_name,
+                                        prefix=self.prefix,
+                                        branch_name=branch_name,
+                                        target_branch_name=target_branch_name)
+                            git.push(authenticated_github_link, branch_refspec)
+                            # Success on syncing current branch
+                            self.log.debug("Successfully synced branch for repository",
+                                        result="SUCCESS",
+                                        repo_name=prefixed_repo_name,
+                                        prefix=self.prefix,
+                                        branch_name=branch_name,
+                                        target_branch_name=target_branch_name)
+                            success_branches.append(branch_name)
+                        except ErrorReturnCode as e:
+                            # Redact or remove the access token before logging
+                            stderr = utils.StringUtils.redact_error(e.stderr, github_access_token, "<ACCESS-TOKEN>")
+                            self.log.error("Failed to push changes to origin branch",
+                                        result="FAILED",
+                                        repo_name=prefixed_repo_name,
+                                        prefix=self.prefix,
+                                        branch_name=branch_name,
+                                        target_branch_name=target_branch_name,
+                                        exit_code=e.exit_code,
+                                        stderr=stderr)
+                            failed_branches.append(branch_name)
+                            continue # Continue to the next master_branch_refspec
+                    continue # Continue to the next branch
 
+                branch_refspec = f"refs/remotes/origin/{branch_name}:refs/heads/{branch_name}"
                 try:
                     self.log.info("Pushing branch for repository",
                                   repo_name=prefixed_repo_name,

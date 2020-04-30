@@ -111,15 +111,6 @@ sync_config:
         "***REMOVED***",
         "***REMOVED***",
         "***REMOVED***",
-        "***REMOVED***",
-        "***REMOVED***",
-        "***REMOVED***",
-        "***REMOVED***",
-        "***REMOVED***",
-        "***REMOVED***",
-        "***REMOVED***",
-        "***REMOVED***",
-        "***REMOVED***",
       ]
     ***REMOVED***: ["***REMOVED***", "***REMOVED***"]
     ***REMOVED***:
@@ -133,5 +124,6 @@ sync_config:
       ]
     ***REMOVED***: ["***REMOVED***", "***REMOVED***", "***REMOVED***", "***REMOVED***"]
     ***REMOVED***: ["***REMOVED***", "***REMOVED***", "***REMOVED***"]
+    ***REMOVED***: ["***REMOVED***"]
   exclude:
     ***REMOVED***: []
