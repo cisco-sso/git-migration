@@ -118,6 +118,10 @@ class RepoOps:
                     filtered_repo_list = utils.RegexUtils.filter_repos(bitbucket_repo_names, [repo_name_regex])
                     if (filtered_repo_list and (repo_or_team not in repository_team_mapping)):
                         repository_team_mapping[repo_or_team] = []
+                    # If there are duplicate repository names in the config file without any team assignments
+                    elif (repo_or_team in repository_team_mapping):
+                        # Repo already exists in the mapping, ignore without raising an error or warning
+                        pass
                     else:
                         self.log.error("Could not find the repository mentioned in config file",
                                        repo_name=repo_or_team,
