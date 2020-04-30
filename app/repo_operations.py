@@ -258,14 +258,14 @@ class RepoOps:
                     self.log.debug("Repository exists on organization",
                                    exists="YES",
                                    repo_name=prefixed_repo_name,
-                                   prefix=self.prefix,
+                                   repo_prefix=self.prefix,
                                    target_org=self.target_org)
                     repo_info["github_link"] = github_org_repo_check["clone_url"]
                 elif (github_org_repo_check.status_code != 404):  # Error
                     self.log.error("Failed to check for repository on github",
                                    result="FAILED",
                                    repo_name=prefixed_repo_name,
-                                   prefix=self.prefix,
+                                   repo_prefix=self.prefix,
                                    status_code=github_org_repo_check.status_code)
                     continue
                 else:  # 404 Not Found
@@ -273,7 +273,7 @@ class RepoOps:
                     self.log.debug("Repository does not exist on organization",
                                    exists="NO",
                                    repo_name=prefixed_repo_name,
-                                   prefix=self.prefix,
+                                   repo_prefix=self.prefix,
                                    target_org=self.target_org)
             else:
                 # Check if same repository already exists on GitHub
@@ -286,21 +286,21 @@ class RepoOps:
                     self.log.debug("Repository exists on GHE account",
                                    exists="YES",
                                    repo_name=prefixed_repo_name,
-                                   prefix=self.prefix,
+                                   repo_prefix=self.prefix,
                                    github_account_id=github_account_id)
                     repo_info["github_link"] = github_repo_check["clone_url"]
                 elif (github_repo_check.status_code != 404):  # Error
                     self.log.error("Failed to check for repository on github",
                                    result="FAILED",
                                    repo_name=prefixed_repo_name,
-                                   prefix=self.prefix,
+                                   repo_prefix=self.prefix,
                                    status_code=github_repo_check.status_code)
                 else:  # 404 Not Found
                     new_repos += 1
                     self.log.debug("Repository does no exist on GHE account",
                                    exists="NO",
                                    repo_name=prefixed_repo_name,
-                                   prefix=self.prefix,
+                                   repo_prefix=self.prefix,
                                    github_account_id=github_account_id)
             processed_repos.append(repo_info)
         total_repos = len(processed_repos)
@@ -329,13 +329,13 @@ class RepoOps:
                 self.log.error("Failed to create new repository on organization",
                                result="FAILED",
                                repo_name=prefixed_repo_name,
-                               prefix=self.prefix,
+                               repo_prefix=self.prefix,
                                target_org=self.target_org)
                 return None
             self.log.debug("New repository created on GitHub organization",
                            result="SUCCESS",
                            repo_name=prefixed_repo_name,
-                           prefix=self.prefix,
+                           repo_prefix=self.prefix,
                            target_org=self.target_org)
         else:
             # Create new repo of same name on GitHub Account
@@ -346,13 +346,13 @@ class RepoOps:
                 self.log.error("Failed to create new repository on personal account",
                                result="FAILED",
                                repo_name=prefixed_repo_name,
-                               prefix=self.prefix,
+                               repo_prefix=self.prefix,
                                github_account_id=github_account_id)
                 return None
             self.log.debug("New repository created on GitHub account",
                            result="SUCCESS",
                            repo_name=prefixed_repo_name,
-                           prefix=self.prefix,
+                           repo_prefix=self.prefix,
                            github_account_id=github_account_id)
 
         github_repo_data = json.loads(git_response.text)
@@ -473,7 +473,7 @@ class RepoOps:
         # git.remote('set-url', 'origin', github_link)
         self.log.debug("Syncing tags. Set origin to Github",
                        repo_name=prefixed_repo_name,
-                       prefix=self.prefix,
+                       repo_prefix=self.prefix,
                        github_link=github_link)
 
         # Push each tag individually, log error if any fails and continue to next tag
@@ -485,7 +485,7 @@ class RepoOps:
                 self.log.debug("Pushed tag for repository",
                                result="SUCCESS",
                                repo_name=prefixed_repo_name,
-                               prefix=self.prefix,
+                               repo_prefix=self.prefix,
                                tag_name=tag_name)
                 success_tags.append(tag_name)
             except ErrorReturnCode as e:
@@ -494,7 +494,7 @@ class RepoOps:
                 self.log.error("Failed to push tag to github",
                                result="FAILED",
                                repo_name=prefixed_repo_name,
-                               prefix=self.prefix,
+                               repo_prefix=self.prefix,
                                tag_name=tag_name,
                                exit_code=e.exit_code,
                                stderr=stderr)
@@ -576,7 +576,7 @@ class RepoOps:
                         try:
                             self.log.info("Pushing branch for repository",
                                         repo_name=prefixed_repo_name,
-                                        prefix=self.prefix,
+                                        repo_prefix=self.prefix,
                                         branch_name=branch_name,
                                         target_branch_name=target_branch_name)
                             git.push(authenticated_github_link, branch_refspec)
@@ -584,7 +584,7 @@ class RepoOps:
                             self.log.debug("Successfully synced branch for repository",
                                         result="SUCCESS",
                                         repo_name=prefixed_repo_name,
-                                        prefix=self.prefix,
+                                        repo_prefix=self.prefix,
                                         branch_name=branch_name,
                                         target_branch_name=target_branch_name)
                             success_branches.append(branch_name)
@@ -594,7 +594,7 @@ class RepoOps:
                             self.log.error("Failed to push changes to origin branch",
                                         result="FAILED",
                                         repo_name=prefixed_repo_name,
-                                        prefix=self.prefix,
+                                        repo_prefix=self.prefix,
                                         branch_name=branch_name,
                                         target_branch_name=target_branch_name,
                                         exit_code=e.exit_code,
@@ -607,15 +607,17 @@ class RepoOps:
                 try:
                     self.log.info("Pushing branch for repository",
                                   repo_name=prefixed_repo_name,
-                                  prefix=self.prefix,
-                                  branch_name=branch_name)
+                                  repo_prefix=self.prefix,
+                                  branch_name=branch_name,
+                                  target_branch_name=branch_name)
                     git.push(authenticated_github_link, branch_refspec)
                     # Success on syncing current branch
                     self.log.debug("Successfully synced branch for repository",
                                    result="SUCCESS",
                                    repo_name=prefixed_repo_name,
-                                   prefix=self.prefix,
-                                   branch_name=branch_name)
+                                   repo_prefix=self.prefix,
+                                   branch_name=branch_name,
+                                   target_branch_name=branch_name)
                     success_branches.append(branch_name)
                 except ErrorReturnCode as e:
                     # Redact or remove the access token before logging
@@ -623,8 +625,9 @@ class RepoOps:
                     self.log.error("Failed to push changes to origin branch",
                                    result="FAILED",
                                    repo_name=prefixed_repo_name,
-                                   prefix=self.prefix,
+                                   repo_prefix=self.prefix,
                                    branch_name=branch_name,
+                                   target_branch_name=branch_name,
                                    exit_code=e.exit_code,
                                    stderr=stderr)
                     failed_branches.append(branch_name)
@@ -678,7 +681,7 @@ class RepoOps:
                     self.log.error("Failed to assign repository to team",
                                    result="FAILED",
                                    repo_name=prefixed_repo_name,
-                                   prefix=self.prefix,
+                                   repo_prefix=self.prefix,
                                    teamName=team,
                                    status_code=assign_response.status_code)
                 else:
@@ -686,7 +689,7 @@ class RepoOps:
                     self.log.debug("Assigned repository to team",
                                    result="SUCCESS",
                                    repo_name=prefixed_repo_name,
-                                   prefix=self.prefix,
+                                   repo_prefix=self.prefix,
                                    teamName=team)
             assign_result[team] = {'success': success_count, 'failure': failure_count}
             self.log.debug("Assigned repositories to team", teamName=team, success_count=success_count)
