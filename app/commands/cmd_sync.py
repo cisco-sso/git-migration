@@ -21,13 +21,13 @@ def is_interactive():
 
 @click.group()
 @click.option('--bitbucket-url',
-              default='https://***REMOVED***/bitbucket/rest/api/1.0',
-              show_default='https://***REMOVED***/bitbucket/rest/api/1.0',
+              default='https://bitbucket-server.com/bitbucket/rest/api/1.0',
+              show_default='https://bitbucket-server.com/bitbucket/rest/api/1.0',
               type=str,
               help="Bitbucket API Base URL")
 @click.option('--github-url',
-              default='https://***REMOVED***/api/v3',
-              show_default='https://***REMOVED***/api/v3',
+              default='https://github-enterprise-server.com/api/v3',
+              show_default='https://github-enterprise-server.com/api/v3',
               type=str,
               help="GitHub API Base URL")
 # For the following options, ensure that 'interactive' mode prompts the user

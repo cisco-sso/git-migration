@@ -1,5 +1,5 @@
 # Organization to sync/migrate the repositories to
-target_org: ***REMOVED***
+target_org: org-name
 
 # Add a prefix to identify the source of the repository (eg: BitBucket)
 
@@ -31,23 +31,23 @@ sync_config:
   include:
     regex: true
     repo_config:
-      ***REMOVED***: # project name
+      ABC: # project key
         regex: false
         repo_config:
-          - ***REMOVED***
-          - automation_test: # team name
+          - repo-name-1
+          - team-alpha: # team name
               regex: true
               repo_config:
-                - ***REMOVED***
-      ***REMOVED***: # project name
+                - .*-some-pattern$
+      DEF: # project key
         regex: true
         repo_config:
-          - automation_test: # team name
-              - ***REMOVED***
+          - team_beta: # team name
+              - .*-more-pattern$
   exclude:
     regex: true
     repo_config:
-      ***REMOVED***:
-        - ***REMOVED***
-      ***REMOVED***:
-        - ***REMOVED***
+      ABC:
+        - .*suffixpattern$
+      DEF:
+        - repo-pattern
